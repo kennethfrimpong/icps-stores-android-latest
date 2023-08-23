@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/linearLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    android:orientation="vertical">
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="60dp"
+        android:src="@drawable/icps"
+        android:layout_gravity="center"
+        android:layout_marginTop="30dp"
+        android:contentDescription="App logo" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Login"
+        android:fontFamily="@font/sfprodisplaybold"
+        android:textSize="30sp"
+        android:textColor="#3f3f3f"
+        android:layout_marginTop="40dp"
+        android:layout_marginStart="20dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:fontFamily="@font/sfprodisplaymedium"
+        android:text="Please enter your ICPS credentials below"
+        android:textColor="#7a7a7a"
+        tools:ignore="TextContrastCheck" />
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="350dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:hint="Email"
+        app:boxBackgroundColor="@color/white"
+        app:boxStrokeColor="@color/black"
+        app:placeholderTextColor="@color/black"
+        app:startIconDrawable="@drawable/ic_baseline_alternate_email_24"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/email_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/sfprodisplaymedium"
+            android:inputType="textEmailAddress"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black"/>
+    </com.google.android.material.textfield.TextInputLayout>
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="350dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:hint="Password"
+        app:boxBackgroundColor="@color/white"
+        app:boxStrokeColor="@color/black"
+        app:placeholderTextColor="@color/black"
+        app:startIconDrawable="@drawable/ic_baseline_password_24"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/password_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/sfprodisplaymedium"
+            android:inputType="textPassword"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black"/>
+    </com.google.android.material.textfield.TextInputLayout>
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/login_progress"
+        android:layout_width="346dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="22dp"
+        android:layout_marginTop="5dp"
+        android:indeterminate="true"
+        app:indeterminateAnimationType="disjoint"
+        android:visibility="gone"/>
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/login_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:fontFamily="@font/sfprodisplaymedium"
+        android:textColor="@color/icps_red"
+        android:layout_gravity="center"
+        android:paddingEnd="10dp"
+        android:paddingTop="5dp"
+        android:visibility="gone"/>
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/forgot_password"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Forgot password?"
+        android:fontFamily="@font/sfprodisplaymedium"
+        android:textColor="#7a7a7a"
+        android:layout_gravity="end"
+        android:paddingEnd="10dp"
+        android:paddingTop="5dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/login_button"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="20dp"
+        style="@style/Widget.Material3.Button"
+        android:text="Login"
+        android:textAllCaps="false"
+        android:textAlignment="center"
+        android:fontFamily="@font/sfprodisplaymedium"
+        app:cornerRadius="20sp"
+        app:backgroundTint="@color/icps_blue"
+        android:onClick="login_with_pass"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="OR"
+        android:fontFamily="@font/sfprodisplaymedium"
+        android:layout_gravity="center"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"/>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/login_with_access_button"
+        style="@style/Widget.Material3.Button"
+        app:backgroundTint="@color/icps_red"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        app:icon="@drawable/ic_outline_perm_contact_calendar_24"
+        app:iconSize="24dp"
+        android:text="Login with Access ID"
+        android:textAllCaps="false"
+        android:fontFamily="@font/sfprodisplaymedium"
+        app:cornerRadius="20sp"
+        android:onClick="access_login"/>
+
+</LinearLayout>
+    <com.google.android.material.button.MaterialButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="30dp"
+        android:id="@+id/configure_button"
+        android:layout_gravity="bottom|end"
+        style="@style/Widget.Material3.Button.IconButton.Outlined"
+        android:text="Configure"
+        app:icon="@drawable/ic_outline_settings_24"
+        app:iconSize="24dp"
+        app:iconPadding="5dp"
+        android:paddingRight="15dp"
+        android:onClick="configure"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

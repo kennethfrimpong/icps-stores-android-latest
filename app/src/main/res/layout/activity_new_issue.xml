@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".NewIssue">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/top_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="100dp"
+            android:layout_height="40dp"
+            android:src="@drawable/icps"
+            android:layout_gravity="center"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="20dp"
+            android:contentDescription="App logo"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/ic_outline_account_circle_24"
+            android:layout_gravity="center"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="20dp"
+            android:contentDescription="Account Icon"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Create New Issue"
+        android:fontFamily="@font/sfprodisplaybold"
+        android:textSize="25sp"
+        android:textColor="#3f3f3f"
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="60dp"/>
+
+    <TextView
+        android:id="@+id/firstLastName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="65dp"
+        android:fontFamily="@font/sfprodisplaymedium"
+        android:text="as First Last"
+        android:textColor="#7a7a7a"
+        tools:ignore="TextContrastCheck" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Receiver"
+        android:fontFamily="@font/sfprodisplaybold"
+        android:textSize="25sp"
+        android:textColor="#3f3f3f"
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="20dp"/>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="20dp"
+        android:hint="Name"
+        android:orientation="horizontal"
+        app:boxBackgroundColor="@color/white"
+        app:boxStrokeColor="@color/black"
+        app:placeholderTextColor="@color/black"
+        app:startIconDrawable="@drawable/ic_baseline_abc_24"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/receiver_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="15dp"
+            android:paddingBottom="15dp"
+            android:fontFamily="@font/sfprodisplaymedium"
+            android:inputType="text"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black" />
+
+
+<!--
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/receiver_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/sfprodisplaymedium"
+            android:inputType="text"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black"/>
+            -->
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/staffFetchProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="21dp"
+        android:layout_marginEnd="21dp"
+        android:layout_marginTop="5dp"
+        android:indeterminate="true"
+        app:indeterminateAnimationType="disjoint"
+        android:visibility="gone"/>
+
+    <TextView
+        android:id="@+id/remove"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Remove"
+        android:fontFamily="@font/sfprodisplaymedium"
+        android:layout_gravity="end"
+        android:textColor="@color/icps_red"
+        android:layout_marginEnd="20dp"
+        android:paddingTop="3dp"
+        android:clickable="true"
+        android:visibility="gone"/>
+
+
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="7dp"
+        android:hint="Book Number"
+        app:boxBackgroundColor="@color/white"
+        app:boxStrokeColor="@color/black"
+        app:placeholderTextColor="@color/black"
+        app:startIconDrawable="@drawable/baseline_corporate_fare_24"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/book_number"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/sfprodisplaymedium"
+            android:maxLength="7"
+            android:inputType="number"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black"/>
+    </com.google.android.material.textfield.TextInputLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Items"
+        android:fontFamily="@font/sfprodisplaybold"
+        android:textSize="25sp"
+        android:textColor="#3f3f3f"
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="20dp"/>
+    
+
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/no_items_cardview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_weight="1"
+        app:cardBackgroundColor="#f9f9f9"
+        app:cardCornerRadius="10dp"
+        app:cardElevation="0dp">
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <ListView
+                android:id="@+id/ongoing_item_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="60dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:divider="@null"/>
+
+            <TextView
+                android:id="@+id/no_item_txt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No item added yet"
+                android:textSize="16sp"
+                android:textColor="#7a7a7a"
+                android:fontFamily="@font/sfprodisplaymedium"
+                android:layout_gravity="center_horizontal"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginBottom="10dp"/>
+
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/add_item_button"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                app:icon="@drawable/plus"
+                app:iconTint="@color/icps_red"
+                android:textColor="@color/icps_red"
+                app:strokeColor="@color/icps_red"
+                app:iconSize="12dp"
+                android:textSize="13sp"
+                android:text="Add item"
+                android:textAllCaps="false"
+                android:fontFamily="@font/sfprodisplaymedium"
+                app:cornerRadius="20sp"
+                android:onClick="add_item"
+                app:layout_constraintTop_toBottomOf="@id/ongoing_item_list"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/create_issue"
+        style="@style/Widget.Material3.Button"
+        app:backgroundTint="@color/icps_blue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        app:icon="@drawable/new_issue"
+        app:iconSize="20dp"
+        android:text="Create"
+        android:textAllCaps="false"
+        android:fontFamily="@font/sfprodisplaymedium"
+        app:cornerRadius="20sp"
+        android:onClick="create_issue"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"/>
+
+
+</LinearLayout>

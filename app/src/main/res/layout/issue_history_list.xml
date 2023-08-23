@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:background="#f9f9f9">
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:backgroundTint="#f2f2f2"
+        app:cardCornerRadius="10dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        app:cardElevation="0dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/off_white">
+            <ImageView
+                android:id="@+id/shipping_box"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:src="@drawable/shippingbox"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:padding="15dp"/>
+            <TextView
+                android:id="@+id/issue_transaction_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Transaction ID"
+                app:layout_constraintStart_toEndOf="@id/shipping_box"
+                app:layout_constraintTop_toTopOf="parent"
+                android:fontFamily="@font/sfprodisplaymedium"
+                android:textSize="12sp"
+                android:textColor="#49454f"
+                android:layout_marginTop="3dp"/>
+            <TextView
+                android:id="@+id/receiver_department"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Receiver Department"
+                android:fontFamily="@font/sfprodisplaybold"
+                app:layout_constraintStart_toEndOf="@id/shipping_box"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:textSize="14sp"
+                android:textColor="@color/black"/>
+            <TextView
+                android:id="@+id/issue_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="XXXX-XX-XX"
+                android:textSize="12sp"
+                android:fontFamily="@font/sfprodisplaymedium"
+                app:layout_constraintTop_toTopOf="@id/issue_transaction_id"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginEnd="20dp"
+                android:textColor="#49454f"/>
+            <TextView
+                android:id="@+id/quantity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:fontFamily="@font/sfprodisplaymedium"
+                android:text="Qty: 50"
+                app:layout_constraintTop_toBottomOf="@id/issue_date"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginEnd="20dp"
+                android:textColor="#49454f"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/receiver_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Receiver Name"
+                android:textSize="12sp"
+                android:fontFamily="@font/sfprodisplayregular"
+                app:layout_constraintTop_toBottomOf="@id/receiver_department"
+                app:layout_constraintStart_toEndOf="@id/shipping_box"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:textColor="#49454f"
+                android:layout_marginBottom="5dp"/>
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.cardview.widget.CardView>
+
+
+</LinearLayout>

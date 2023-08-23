@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:background="#f9f9f9">
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:backgroundTint="#f2f2f2"
+        app:cardCornerRadius="10dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        app:cardElevation="0dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/off_white">
+            <ImageView
+                android:id="@+id/shipping_box"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:src="@drawable/shippingbox"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:padding="4dp"/>
+            <TextView
+                android:id="@+id/store_location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Store Location"
+                app:layout_constraintStart_toEndOf="@id/shipping_box"
+                app:layout_constraintTop_toTopOf="parent"
+                android:fontFamily="@font/sfprodisplaymedium"
+                android:textSize="10sp"
+                android:textColor="#49454f"
+                android:layout_marginTop="3dp"/>
+            <TextView
+                android:id="@+id/product_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Product Name"
+                android:fontFamily="@font/sfprodisplaybold"
+                app:layout_constraintStart_toEndOf="@id/shipping_box"
+                app:layout_constraintBottom_toTopOf="@id/product_quantity"
+                app:layout_constraintTop_toBottomOf="@id/store_location"
+                android:textSize="12sp"
+                android:textColor="@color/black"/>
+            <TextView
+                android:id="@+id/product_quantity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Qty: 50"
+                android:textSize="10sp"
+                android:fontFamily="@font/sfprodisplayregular"
+                app:layout_constraintTop_toBottomOf="@id/product_name"
+                app:layout_constraintStart_toEndOf="@id/shipping_box"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:textColor="#49454f"
+                android:layout_marginBottom="3dp"/>
+
+            <TextView
+                android:id="@+id/product_location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Location"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginEnd="20dp"
+                android:layout_marginBottom="10dp"
+                android:fontFamily="@font/sfprodisplaymedium"
+                android:textColor="#49454f"
+                android:textSize="10sp"/>
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.cardview.widget.CardView>
+
+
+</LinearLayout>
