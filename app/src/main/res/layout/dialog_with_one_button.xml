@@ -58,7 +58,7 @@
             android:layout_height="40dp"
             android:text="@string/ok"
             android:textColor="@color/white"
-            android:background="@drawable/button_blue"/>
+            android:background="@color/cardview_dark_background"/>
 
     </LinearLayout>
 
