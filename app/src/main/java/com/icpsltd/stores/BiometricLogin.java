@@ -79,6 +79,7 @@ public class BiometricLogin extends AppCompatActivity {
     }
 
     public void begin_login_verification(View view) {
+        can_fetch_status.setText("");
         if(can_entry.getText().length() == 6){
             linearProgressIndicator.setVisibility(View.VISIBLE);
 
@@ -224,6 +225,8 @@ public class BiometricLogin extends AppCompatActivity {
 
         } else if (can_entry.getText().length() != 6) {
             Toast.makeText(this, "CAN number length should be 6", Toast.LENGTH_SHORT).show();
+            can_fetch_status.setText("CAN number length should be 6");
+            can_fetch_status.setTextColor(Color.RED);
         }
 
 
