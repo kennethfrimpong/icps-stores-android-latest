@@ -91,7 +91,7 @@ public class BiometricLogin extends AppCompatActivity {
             } catch (Exception e){
                 e.printStackTrace();
                 runOnUiThread(()->{
-                    Toast.makeText(this, "Server connection error, check config", Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(this, "Server connection error, check config", Toast.LENGTH_SHORT).show();
                     linearProgressIndicator.setVisibility(View.GONE);
                     can_fetch_status.setText("Server connection error, check configuration");
                     can_fetch_status.setTextColor(Color.RED);
@@ -116,7 +116,7 @@ public class BiometricLogin extends AppCompatActivity {
                     if(resString.equals("error")){
                         //error
                         runOnUiThread(()->{
-                            Toast.makeText(this, "There was an error", Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(this, "There was an error", Toast.LENGTH_SHORT).show();
                             linearProgressIndicator.setVisibility(View.GONE);
                             can_fetch_status.setText("There was an error");
                             can_fetch_status.setTextColor(Color.RED);
@@ -125,7 +125,7 @@ public class BiometricLogin extends AppCompatActivity {
                     } else if (resString.equals("!exist")) {
                         //no user
                         runOnUiThread(()->{
-                            Toast.makeText(this, "No user was found", Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(this, "No user was found", Toast.LENGTH_SHORT).show();
                             linearProgressIndicator.setVisibility(View.GONE);
                             can_fetch_status.setText("No user was found");
                             can_fetch_status.setTextColor(Color.RED);
@@ -194,7 +194,11 @@ public class BiometricLogin extends AppCompatActivity {
                 } catch (Exception e){
                     e.printStackTrace();
                     runOnUiThread(()->{
-                        Toast.makeText(this, "Could not establish server connection", Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(this, "Could not establish server connection", Toast.LENGTH_SHORT).show();
+                        linearProgressIndicator.setVisibility(View.GONE);
+                        can_fetch_status.setText("Could not establish server connection");
+                        can_fetch_status.setTextColor(Color.RED);
+
                     });
                     return null;
 
