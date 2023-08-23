@@ -130,6 +130,7 @@
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
+
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/add_stock"
                 android:layout_width="160dp"
