@@ -91,7 +91,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="User Status display"
-            android:fontFamily="@font/sfprodisplaymedium"/>
+            android:fontFamily="@font/sfprodisplaymedium"
+            android:layout_gravity="center"/>
 
         <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/login_progress"
