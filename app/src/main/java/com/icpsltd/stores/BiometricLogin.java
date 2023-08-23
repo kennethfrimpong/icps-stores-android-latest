@@ -50,8 +50,11 @@ public class BiometricLogin extends AppCompatActivity {
     private String apiPort;
     private OkHttpClient okHttpClient;
     private Response response;
+    private TextView can_fetch_status;
 
     private String resString;
+
+    private LinearProgressIndicator linearProgressIndicator;
 
     MaterialCardView fingerOne, fingerTwo, fingerThree, fingerFour;
 
@@ -67,6 +70,9 @@ public class BiometricLogin extends AppCompatActivity {
         fingerTwo = findViewById(R.id.finger_two);
         fingerThree = findViewById(R.id.finger_three);
         fingerFour = findViewById(R.id.finger_four);
+        can_fetch_status = findViewById(R.id.can_fetch_status);
+        linearProgressIndicator = findViewById(R.id.can_fetch_lpi);
+        can_fetch_status = findViewById(R.id.can_fetch_status);
         configureHttpConnectionWithSSL();
 
 
@@ -74,6 +80,7 @@ public class BiometricLogin extends AppCompatActivity {
 
     public void begin_login_verification(View view) {
         if(can_entry.getText().length() == 6){
+            linearProgressIndicator.setVisibility(View.VISIBLE);
 
             try{
                 DBHandler dbHandler = new DBHandler(getApplicationContext());
@@ -84,6 +91,9 @@ public class BiometricLogin extends AppCompatActivity {
                 e.printStackTrace();
                 runOnUiThread(()->{
                     Toast.makeText(this, "Server connection error, check config", Toast.LENGTH_SHORT).show();
+                    linearProgressIndicator.setVisibility(View.GONE);
+                    can_fetch_status.setText("Server connection error, check configuration");
+                    can_fetch_status.setTextColor(Color.RED);
                 });
 
             }
@@ -106,20 +116,25 @@ public class BiometricLogin extends AppCompatActivity {
                         //error
                         runOnUiThread(()->{
                             Toast.makeText(this, "There was an error", Toast.LENGTH_SHORT).show();
+                            linearProgressIndicator.setVisibility(View.GONE);
+                            can_fetch_status.setText("There was an error");
+                            can_fetch_status.setTextColor(Color.RED);
                         });
                         return resString;
                     } else if (resString.equals("!exist")) {
                         //no user
                         runOnUiThread(()->{
                             Toast.makeText(this, "No user was found", Toast.LENGTH_SHORT).show();
+                            linearProgressIndicator.setVisibility(View.GONE);
+                            can_fetch_status.setText("No user was found");
+                            can_fetch_status.setTextColor(Color.RED);
                         });
                         return resString;
 
                     } else if (resString.equals("verified")) {
 
                         runOnUiThread(()->{
-                            Toast.makeText(this, "Verified", Toast.LENGTH_SHORT).show();
-
+                            linearProgressIndicator.setVisibility(View.GONE);
                             can_entry_layout.setVisibility(View.GONE);
                             fingerprint_layout.setVisibility(View.VISIBLE);
                             login_helper.setText("Choose finger to scan");
