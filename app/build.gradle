@@ -29,6 +29,10 @@ android {
 }
 
 dependencies {
+    //Verification Library
+    implementation fileTree(dir: 'libs', include: ['*.jar','*.aar'])
+    implementation files('libs/CredenceIDDeviceSDK.jar')
+    //
 
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
