@@ -101,6 +101,13 @@ public class BiometricLogin extends AppCompatActivity {
         if(can_entry.getText().length() == 6){
             linearProgressIndicator.setVisibility(View.VISIBLE);
 
+            Intent intent = new Intent(BiometricLogin.this, FingerPrint.class);
+            intent.putExtra("can_number",can_entry.getText().toString());
+            startActivity(intent);
+
+
+            /*
+
             try{
                 DBHandler dbHandler = new DBHandler(getApplicationContext());
                 apiHost = dbHandler.getApiHost();
@@ -172,6 +179,8 @@ public class BiometricLogin extends AppCompatActivity {
                 }
                 return null;
             });
+
+            */
 
             /*
 

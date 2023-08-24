@@ -13,6 +13,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -72,6 +73,7 @@ public class FingerPrint extends AppCompatActivity {
         try{
             can_number = getIntent().getStringExtra("can_number");
             can_number_textview.setText("CAN #: "+can_number);
+            Log.i("CAN NUMBER",can_number);
 
             CardReading cardReading = new CardReading();
             cardReading.execute();
