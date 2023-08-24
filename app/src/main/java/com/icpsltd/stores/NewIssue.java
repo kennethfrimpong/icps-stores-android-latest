@@ -300,11 +300,22 @@ public class NewIssue extends AppCompatActivity {
     }
 
     private void fetchReceiverInfo(){
+        String searchedString = searchStaff.getText().toString();
+        String matchesWholeWord = searchedString;
+        String startsWith = searchedString+"%";
+        String withHyphen = searchedString+"-%";
+        String startsWithWordInSentence = "% "+searchedString+"%";
+        Log.i("SearchTest","Updated Search Started");
+        //Cursor cursor = db.rawQuery(,null);
+        String sql = "{\"query\":\"SELECT * FROM staffTable WHERE firstName LIKE \'"+matchesWholeWord+"\' OR firstName LIKE \'"+startsWith+"\' OR firstName LIKE \'"+withHyphen+"\' OR firstName LIKE \'"+startsWithWordInSentence+"\' OR middleName LIKE \'"+startsWith+"\' OR middleName LIKE \'"+matchesWholeWord+"\' OR middleName LIKE \'"+startsWithWordInSentence+"\' OR lastName LIKE \'"+startsWith+"\' OR lastName LIKE \'"+matchesWholeWord+"\' OR lastName LIKE \'"+startsWithWordInSentence+"\' LIMIT 6\"}";
+        //send sql string to api and wait for results.
+
         DBHandler dbHandler1 = new DBHandler(getApplicationContext());
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         Future<String> futureResult = executorService.submit(() -> {
 
             try{
+                RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/query")
                         //.post(requestBody)
