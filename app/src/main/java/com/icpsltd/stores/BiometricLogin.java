@@ -65,13 +65,8 @@ public class BiometricLogin extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_biometric_login);
         can_entry_layout = findViewById(R.id.can_entry_layout);
-        fingerprint_layout = findViewById(R.id.fingerprint_layout);
         can_entry = findViewById(R.id.can_entry);
         login_helper = findViewById(R.id.login_tv);
-        fingerOne = findViewById(R.id.finger_one);
-        fingerTwo = findViewById(R.id.finger_two);
-        fingerThree = findViewById(R.id.finger_three);
-        fingerFour = findViewById(R.id.finger_four);
         can_fetch_status = findViewById(R.id.can_fetch_status);
         linearProgressIndicator = findViewById(R.id.can_fetch_lpi);
         can_fetch_status = findViewById(R.id.can_fetch_status);
@@ -136,61 +131,8 @@ public class BiometricLogin extends AppCompatActivity {
 
                     } else if (resString.equals("verified")) {
 
-                        runOnUiThread(()->{
-                            linearProgressIndicator.setVisibility(View.GONE);
-                            can_entry_layout.setVisibility(View.GONE);
-                            fingerprint_layout.setVisibility(View.VISIBLE);
-                            configure_button.setVisibility(View.GONE);
-                            login_helper.setText("Choose finger to scan");
-                            Toast.makeText(getApplicationContext(),"Choose finger to scan",Toast.LENGTH_SHORT).show();
-
-                            fingerOne.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    fingerOne.setStrokeColor(Color.GREEN);
-                                    fingerTwo.setStrokeColor(Color.BLACK);
-                                    fingerThree.setStrokeColor(Color.BLACK);
-                                    fingerFour.setStrokeColor(Color.BLACK);
-                                }
-                            });
-
-                            fingerTwo.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    fingerOne.setStrokeColor(Color.BLACK);
-                                    fingerTwo.setStrokeColor(Color.GREEN);
-                                    fingerThree.setStrokeColor(Color.BLACK);
-                                    fingerFour.setStrokeColor(Color.BLACK);
-
-                                }
-                            });
-
-                            fingerThree.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    fingerOne.setStrokeColor(Color.BLACK);
-                                    fingerTwo.setStrokeColor(Color.BLACK);
-                                    fingerThree.setStrokeColor(Color.GREEN);
-                                    fingerFour.setStrokeColor(Color.BLACK);
-
-                                }
-                            });
-
-                            fingerFour.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    fingerOne.setStrokeColor(Color.BLACK);
-                                    fingerTwo.setStrokeColor(Color.BLACK);
-                                    fingerThree.setStrokeColor(Color.BLACK);
-                                    fingerFour.setStrokeColor(Color.GREEN);
-
-                                }
-                            });
-
-                        });
-
-
-
+                        Intent intent = new Intent(BiometricLogin.this, FingerPrint.class);
+                        startActivity(intent);
 
                     }
                     response.close();
