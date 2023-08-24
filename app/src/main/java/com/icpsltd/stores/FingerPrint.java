@@ -73,7 +73,7 @@ public class FingerPrint extends AppCompatActivity {
         try{
             can_number = getIntent().getStringExtra("can_number");
             can_number_textview.setText("CAN #: "+can_number);
-            Log.i("CAN NUMBER",can_number);
+            Log.i("CAN_NUMBER",can_number);
 
             CardReading cardReading = new CardReading();
             cardReading.execute();
@@ -82,54 +82,54 @@ public class FingerPrint extends AppCompatActivity {
             can_number_textview.setVisibility(View.GONE);
         }
 
-        runOnUiThread(()->{
-            login_helper.setText("Choose finger to scan");
-            Toast.makeText(getApplicationContext(),"Choose finger to scan",Toast.LENGTH_SHORT).show();
-
-            fingerOne.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    fingerOne.setStrokeColor(Color.GREEN);
-                    fingerTwo.setStrokeColor(Color.BLACK);
-                    fingerThree.setStrokeColor(Color.BLACK);
-                    fingerFour.setStrokeColor(Color.BLACK);
-                }
-            });
-
-            fingerTwo.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    fingerOne.setStrokeColor(Color.BLACK);
-                    fingerTwo.setStrokeColor(Color.GREEN);
-                    fingerThree.setStrokeColor(Color.BLACK);
-                    fingerFour.setStrokeColor(Color.BLACK);
-
-                }
-            });
-
-            fingerThree.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    fingerOne.setStrokeColor(Color.BLACK);
-                    fingerTwo.setStrokeColor(Color.BLACK);
-                    fingerThree.setStrokeColor(Color.GREEN);
-                    fingerFour.setStrokeColor(Color.BLACK);
-
-                }
-            });
-
-            fingerFour.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    fingerOne.setStrokeColor(Color.BLACK);
-                    fingerTwo.setStrokeColor(Color.BLACK);
-                    fingerThree.setStrokeColor(Color.BLACK);
-                    fingerFour.setStrokeColor(Color.GREEN);
-
-                }
-            });
-
-        });
+//        runOnUiThread(()->{
+//            login_helper.setText("Choose finger to scan");
+//            Toast.makeText(getApplicationContext(),"Choose finger to scan",Toast.LENGTH_SHORT).show();
+//
+//            fingerOne.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    fingerOne.setStrokeColor(Color.GREEN);
+//                    fingerTwo.setStrokeColor(Color.BLACK);
+//                    fingerThree.setStrokeColor(Color.BLACK);
+//                    fingerFour.setStrokeColor(Color.BLACK);
+//                }
+//            });
+//
+//            fingerTwo.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    fingerOne.setStrokeColor(Color.BLACK);
+//                    fingerTwo.setStrokeColor(Color.GREEN);
+//                    fingerThree.setStrokeColor(Color.BLACK);
+//                    fingerFour.setStrokeColor(Color.BLACK);
+//
+//                }
+//            });
+//
+//            fingerThree.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    fingerOne.setStrokeColor(Color.BLACK);
+//                    fingerTwo.setStrokeColor(Color.BLACK);
+//                    fingerThree.setStrokeColor(Color.GREEN);
+//                    fingerFour.setStrokeColor(Color.BLACK);
+//
+//                }
+//            });
+//
+//            fingerFour.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    fingerOne.setStrokeColor(Color.BLACK);
+//                    fingerTwo.setStrokeColor(Color.BLACK);
+//                    fingerThree.setStrokeColor(Color.BLACK);
+//                    fingerFour.setStrokeColor(Color.GREEN);
+//
+//                }
+//            });
+//
+//        });
     }
 
     public void restart_login(View view) {
@@ -150,7 +150,7 @@ public class FingerPrint extends AppCompatActivity {
         @Override
         protected Boolean doInBackground(Object... objects) {
 //
-            cardDetails = Functions.readGhanaCard(FingerPrint.this, "802283", finger_one_textview, finger_two_textview, finger_three_textview, finger_four_textview);
+            cardDetails = Functions.readGhanaCard(FingerPrint.this, can_number, finger_one_textview, finger_two_textview, finger_three_textview, finger_four_textview);
             //Functions.arrangeFingers(finger_1,finger_2,finger_3,finger_4,cardDetails.getGhanaIdCardFpTemplateInfosList());
             //Functions.openFingerPrintReader();
             App.BioManager.openFingerprintReader(mFingerprintOpenCloseListener);

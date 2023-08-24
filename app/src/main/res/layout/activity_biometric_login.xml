@@ -143,7 +143,6 @@
             android:textAllCaps="false"
             android:fontFamily="@font/sfprodisplaymedium"
             app:cornerRadius="20sp"
-            android:onClick="begin_login_verification"
             android:layout_marginTop="20dp"/>
 
     </LinearLayout>

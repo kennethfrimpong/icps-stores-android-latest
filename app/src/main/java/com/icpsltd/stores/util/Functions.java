@@ -105,6 +105,7 @@ public class Functions {
                 }
 
                 if (FAIL == resultCode) {
+                    Log.d("ERROR_ISC", hint);
                     if (hint.contains(":")) {
 
                         String[] exceptions = hint.split(":");

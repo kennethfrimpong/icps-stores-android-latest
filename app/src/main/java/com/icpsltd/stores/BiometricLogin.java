@@ -23,6 +23,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.credenceid.biometrics.Biometrics;
+import com.credenceid.biometrics.BiometricsManager;
 import com.credenceid.icao.GhanaIdCardFpTemplateInfo;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
@@ -79,6 +80,8 @@ public class BiometricLogin extends AppCompatActivity {
     private LinearProgressIndicator linearProgressIndicator;
     private MaterialButton configure_button;
 
+    private MaterialButton loginButton;
+
     MaterialCardView fingerOne, fingerTwo, fingerThree, fingerFour;
 
     @Override
@@ -92,19 +95,35 @@ public class BiometricLogin extends AppCompatActivity {
         linearProgressIndicator = findViewById(R.id.can_fetch_lpi);
         can_fetch_status = findViewById(R.id.can_fetch_status);
         configure_button = findViewById(R.id.configure_button);
-        configureHttpConnectionWithSSL();
+        loginButton = findViewById(R.id.login_with_access_button);
+        loginButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(BiometricLogin.this, FingerPrint.class);
+                intent.putExtra("can_number",can_entry.getText().toString());
+                startActivity(intent);
+            }
+        });
+
+        initializeBiometrics();
+       // configureHttpConnectionWithSSL();
 
     }
 
     public void begin_login_verification(View view) {
         can_fetch_status.setText("");
-        if(can_entry.getText().length() == 6){
-            linearProgressIndicator.setVisibility(View.VISIBLE);
+        Intent intent = new Intent(BiometricLogin.this, FingerPrint.class);
+        intent.putExtra("can_number",can_entry.getText().toString());
+        startActivity(intent);
 
-            Intent intent = new Intent(BiometricLogin.this, FingerPrint.class);
-            intent.putExtra("can_number",can_entry.getText().toString());
-            startActivity(intent);
-
+//        can_fetch_status.setText("");
+//        if(can_entry.getText().length() == 6){
+//            linearProgressIndicator.setVisibility(View.VISIBLE);
+//
+//            Intent intent = new Intent(BiometricLogin.this, FingerPrint.class);
+//            intent.putExtra("can_number",can_entry.getText().toString());
+//            startActivity(intent);
+//
 
             /*
 
@@ -203,11 +222,11 @@ public class BiometricLogin extends AppCompatActivity {
 
              */
 
-        } else if (can_entry.getText().length() != 6) {
-            Toast.makeText(this, "CAN number length should be 6", Toast.LENGTH_SHORT).show();
-            can_fetch_status.setText("CAN number length should be 6");
-            can_fetch_status.setTextColor(Color.RED);
-        }
+//        } else if (can_entry.getText().length() != 6) {
+//            Toast.makeText(this, "CAN number length should be 6", Toast.LENGTH_SHORT).show();
+//            can_fetch_status.setText("CAN number length should be 6");
+//            can_fetch_status.setTextColor(Color.RED);
+//        }
 
 
     }
@@ -276,6 +295,24 @@ public class BiometricLogin extends AppCompatActivity {
         Intent intent = new Intent(BiometricLogin.this,Configure.class);
         startActivity(intent);
     }
+    private void initializeBiometrics() {
+        App.Context = getApplicationContext();
+        App.BioManager = new BiometricsManager(getApplicationContext());
+        App.BioManager.initializeBiometrics(new Biometrics.OnInitializedListener() {
+            @Override
+            public void onInitialized(Biometrics.ResultCode resultCode, String s, String s1) {
+                if (resultCode == Biometrics.ResultCode.OK) {
+                    App.deviceFamily = App.BioManager.getDeviceFamily();
+                    App.deviceType = App.BioManager.getDeviceType();
 
+
+
+                } else {
+                    Functions.Show_Alert(getApplicationContext(), "BioManager Initialization", "Initialization Failed");
+                }
+            }
+
+        });
+    }
 
 }
