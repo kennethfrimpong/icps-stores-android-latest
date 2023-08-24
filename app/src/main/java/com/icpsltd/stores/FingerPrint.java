@@ -49,7 +49,8 @@ public class FingerPrint extends AppCompatActivity {
     private AlertDialog alertDialog;
 
     private MaterialCardView fingerOne,fingerTwo,fingerThree,fingerFour;
-    private TextView login_helper;
+    private TextView login_helper, finger_one_textview, finger_two_textview, finger_three_textview, finger_four_textview, can_number_textview;
+    private String can_number;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +61,21 @@ public class FingerPrint extends AppCompatActivity {
         fingerTwo = findViewById(R.id.finger_two);
         fingerThree = findViewById(R.id.finger_three);
         fingerFour = findViewById(R.id.finger_four);
+
+        //finger textviews
+        finger_one_textview = findViewById(R.id.finger_one_tv);
+        finger_two_textview = findViewById(R.id.finger_two_tv);
+        finger_three_textview = findViewById(R.id.finger_three_tv);
+        finger_four_textview = findViewById(R.id.finger_four_tv);
+        can_number_textview = findViewById(R.id.can_number_tv);
+
+        try{
+            can_number = getIntent().getStringExtra("can_number");
+            can_number_textview.setText("CAN #: "+can_number);
+        } catch (Exception e){
+            e.printStackTrace();
+            can_number_textview.setVisibility(View.GONE);
+        }
 
         runOnUiThread(()->{
             login_helper.setText("Choose finger to scan");

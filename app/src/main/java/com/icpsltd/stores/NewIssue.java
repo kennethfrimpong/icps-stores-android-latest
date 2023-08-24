@@ -208,7 +208,12 @@ public class NewIssue extends AppCompatActivity {
                 }
             }
         });
-        fetchReceiverInfo();
+        try{
+            fetchReceiverInfo();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
 
         TextView asname = findViewById(R.id.firstLastName);
         asname.setText("as "+dbHandler.getFirstName()+" "+dbHandler.getLastName());
@@ -299,146 +304,8 @@ public class NewIssue extends AppCompatActivity {
                 && touchY >= bottomSheetTop && touchY <= bottomSheetBottom;
     }
 
-    private void fetchReceiverInfo(){
-        String searchedString = searchStaff.getText().toString();
-        String matchesWholeWord = searchedString;
-        String startsWith = searchedString+"%";
-        String withHyphen = searchedString+"-%";
-        String startsWithWordInSentence = "% "+searchedString+"%";
-        Log.i("SearchTest","Updated Search Started");
-        //Cursor cursor = db.rawQuery(,null);
-        String sql = "{\"query\":\"SELECT * FROM staffTable WHERE firstName LIKE \'"+matchesWholeWord+"\' OR firstName LIKE \'"+startsWith+"\' OR firstName LIKE \'"+withHyphen+"\' OR firstName LIKE \'"+startsWithWordInSentence+"\' OR middleName LIKE \'"+startsWith+"\' OR middleName LIKE \'"+matchesWholeWord+"\' OR middleName LIKE \'"+startsWithWordInSentence+"\' OR lastName LIKE \'"+startsWith+"\' OR lastName LIKE \'"+matchesWholeWord+"\' OR lastName LIKE \'"+startsWithWordInSentence+"\' LIMIT 6\"}";
-        //send sql string to api and wait for results.
 
-        DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        Future<String> futureResult = executorService.submit(() -> {
-
-            try{
-                RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
-                Request request = new Request.Builder()
-                        .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/query")
-                        //.post(requestBody)
-                        .build();
-                Response response = okHttpClient.newCall(request).execute();
-                String resString = response.body().string();
-
-                JSONArray jsonArray = new JSONArray(resString);
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                    int staffID = jsonObject.getInt("staffID");
-                    String firstName = jsonObject.getString("firstName");
-
-                    String middleName = jsonObject.getString("middleName");
-                    String lastName = jsonObject.getString("lastName");
-                    String type = jsonObject.getString("type");
-                    String department = jsonObject.getString("department");
-                    dbHandler1.syncStaffTable(staffID,firstName,middleName,lastName,type,department);
-
-                }
-
-                //Log.i("Response",resString);
-
-                response.close();
-
-                MaterialAutoCompleteTextView materialAutoCompleteTextView = findViewById(R.id.receiver_name);
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        LinearProgressIndicator linearProgressIndicator = findViewById(R.id.staffFetchProgress);
-                        linearProgressIndicator.setVisibility(View.GONE);
-                        fetchedStaffTable = new ArrayList<>();
-                        DBHandler dbHandler = new DBHandler(getApplicationContext());
-                        SQLiteDatabase db = dbHandler.getReadableDatabase();
-                        Cursor cursor = db.rawQuery("SELECT * FROM staffTable LIMIT 6",null);
-                        while (cursor.moveToNext()){
-                            Integer id = cursor.getInt(cursor.getColumnIndexOrThrow("staffID"));
-                            String firstName = cursor.getString(cursor.getColumnIndexOrThrow("staffFirstName"));
-                            String middleName = cursor.getString(cursor.getColumnIndexOrThrow("staffMiddleName"));
-                            String lastName = cursor.getString(cursor.getColumnIndexOrThrow("staffLastName"));
-                            String type = cursor.getString(cursor.getColumnIndexOrThrow("staffType"));
-                            String department = cursor.getString(cursor.getColumnIndexOrThrow("staffDepartment"));
-                            Log.e("Retrieved ",firstName+" "+middleName+" "+lastName);
-
-                            RetrievedStaff retrievedStaff = new RetrievedStaff(id,firstName,middleName,lastName,department,type);
-                            fetchedStaffTable.add(retrievedStaff);
-
-                        }
-                    }
-                });
-
-
-                arrayAdapter = new ArrayAdapter<RetrievedStaff>(getApplicationContext(),R.layout.staff_list_layout,R.id.staff_name, fetchedStaffTable){
-                    @Override
-                    public View getView(int position, View convertView, ViewGroup parent) {
-                        View view = super.getView(position, convertView, parent);
-
-                        RetrievedStaff retrievedStaff = getItem(position);
-                        TextView staff_name = view.findViewById(R.id.staff_name);
-                        TextView staff_type = view.findViewById(R.id.staff_type);
-                        TextView staff_department = view.findViewById(R.id.staff_department);
-
-                        if(retrievedStaff.getMiddleName() != null){
-                            staff_name.setText(retrievedStaff.getfirstName()+" "+retrievedStaff.getMiddleName()+" "+retrievedStaff.getlastName());
-
-                        } else {
-                            staff_name.setText(retrievedStaff.getfirstName()+" "+retrievedStaff.getlastName());
-                        }
-                        staff_type.setText(retrievedStaff.getType());
-                        staff_department.setText(retrievedStaff.getDepartment());
-
-                        //Selected receiver
-
-                        materialAutoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                            @Override
-                            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                                RetrievedStaff retrievedStaff1 = getItem(position);
-                                MaterialAutoCompleteTextView materialAutoCompleteTextView1 = findViewById(R.id.receiver_name);
-                                if(retrievedStaff1.getMiddleName() != null){
-                                    materialAutoCompleteTextView1.setText(retrievedStaff1.getfirstName()+" "+retrievedStaff1.getMiddleName()+" "+retrievedStaff1.getlastName());
-                                    receiver_full_name =retrievedStaff1.getfirstName()+" "+retrievedStaff1.getMiddleName()+" "+retrievedStaff1.getlastName();
-                                } else {
-                                    materialAutoCompleteTextView1.setText(retrievedStaff1.getfirstName()+" "+retrievedStaff1.getlastName());
-                                    receiver_full_name = retrievedStaff1.getfirstName()+" "+retrievedStaff1.getlastName();
-                                }
-                                ///MyPrefs myPrefs = new MyPrefs();
-                                //myPrefs.saveReceiverFirstName();
-                                receiver_name = retrievedStaff1.getfirstName();
-                                receiver_dept = retrievedStaff1.getDepartment();
-                                staffID = retrievedStaff1.getID();
-
-                                TextView textView = findViewById(R.id.remove);
-                                textView.setVisibility(View.VISIBLE);
-                                materialAutoCompleteTextView1.setEnabled(false);
-
-                            }
-                        });
-
-                        return view;
-                    }
-                };
-
-                materialAutoCompleteTextView.setThreshold(1);
-                materialAutoCompleteTextView.setAdapter(arrayAdapter);
-                arrayAdapter.notifyDataSetChanged();
-
-
-
-
-                return resString;
-            } catch (Exception e){
-                e.printStackTrace();
-
-            }
-            return null;
-        });
-    }
-
-
-
-    private void fetchReceiverInfo1() {
+    private void fetchReceiverInfo() {
 
 
         FetchStaffTable fetchStaffTable = new FetchStaffTable(new FetchStaffTaskListener() {
@@ -460,6 +327,9 @@ public class NewIssue extends AppCompatActivity {
                             Integer id = cursor.getInt(cursor.getColumnIndexOrThrow("staffID"));
                             String firstName = cursor.getString(cursor.getColumnIndexOrThrow("staffFirstName"));
                             String middleName = cursor.getString(cursor.getColumnIndexOrThrow("staffMiddleName"));
+                            if(middleName.equals("null")){
+                                middleName = "";
+                            }
                             String lastName = cursor.getString(cursor.getColumnIndexOrThrow("staffLastName"));
                             String type = cursor.getString(cursor.getColumnIndexOrThrow("staffType"));
                             String department = cursor.getString(cursor.getColumnIndexOrThrow("staffDepartment"));
@@ -499,7 +369,7 @@ public class NewIssue extends AppCompatActivity {
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 RetrievedStaff retrievedStaff1 = getItem(position);
                                 MaterialAutoCompleteTextView materialAutoCompleteTextView1 = findViewById(R.id.receiver_name);
-                                if(retrievedStaff1.getMiddleName() != null){
+                                if(retrievedStaff1.getMiddleName() != null || retrievedStaff1.getMiddleName() != "null"){
                                     materialAutoCompleteTextView1.setText(retrievedStaff1.getfirstName()+" "+retrievedStaff1.getMiddleName()+" "+retrievedStaff1.getlastName());
                                     receiver_full_name =retrievedStaff1.getfirstName()+" "+retrievedStaff1.getMiddleName()+" "+retrievedStaff1.getlastName();
                                 } else {
@@ -1412,7 +1282,8 @@ public class NewIssue extends AppCompatActivity {
         protected Connection doInBackground(Void... voids) {
             DBHandler dbHandler1 = new DBHandler(getApplicationContext());
             dbHandler1.clearStockTable();
-            try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD)) {
+            dbHandler1.clearStaffTable();
+            try {
                 dbHandler1.clearStaffTable();
                 String searchedString = searchStaff.getText().toString();
                 String matchesWholeWord = searchedString;
@@ -1421,49 +1292,40 @@ public class NewIssue extends AppCompatActivity {
                 String startsWithWordInSentence = "% "+searchedString+"%";
                 Log.i("SearchTest","Updated Search Started");
                 //Cursor cursor = db.rawQuery(,null);
-                String sql = "SELECT * FROM staffTable WHERE firstName LIKE '"+matchesWholeWord+"' OR firstName LIKE '"+startsWith+"' OR firstName LIKE '"+withHyphen+"' OR firstName LIKE '"+startsWithWordInSentence+"' OR middleName LIKE '"+startsWith+"' OR middleName LIKE '"+matchesWholeWord+"' OR middleName LIKE '"+startsWithWordInSentence+"' OR lastName LIKE '"+startsWith+"' OR lastName LIKE '"+matchesWholeWord+"' OR lastName LIKE '"+startsWithWordInSentence+"' LIMIT 6";
+                String sql = "{\"query\":\"firstName LIKE \'"+matchesWholeWord+"\' OR firstName LIKE \'"+startsWith+"\' OR firstName LIKE \'"+withHyphen+"\' OR firstName LIKE \'"+startsWithWordInSentence+"\' OR middleName LIKE \'"+startsWith+"\' OR middleName LIKE \'"+matchesWholeWord+"\' OR middleName LIKE \'"+startsWithWordInSentence+"\' OR lastName LIKE \'"+startsWith+"\' OR lastName LIKE \'"+matchesWholeWord+"\' OR lastName LIKE \'"+startsWithWordInSentence+"\' LIMIT 6\",\"type\":\"staff_fetch\"}";
                 //send sql string to api and wait for results.
+                try{
+                    RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
+                    Request request = new Request.Builder()
+                            .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .post(requestBody)
+                            .build();
+                    Response response = okHttpClient.newCall(request).execute();
+                    String resString = response.body().string();
 
-                ExecutorService executorService = Executors.newSingleThreadExecutor();
-                Future<String> futureResult = executorService.submit(() -> {
+                    JSONArray jsonArray = new JSONArray(resString);
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                    try{
-                        Request request = new Request.Builder()
-                                .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/query")
-                                //.post(requestBody)
-                                .build();
-                        Response response = okHttpClient.newCall(request).execute();
-                        String resString = response.body().string();
+                        int staffID = jsonObject.getInt("staffID");
+                        String firstName = jsonObject.getString("firstName");
 
-                        JSONArray jsonArray = new JSONArray(resString);
-                        for (int i = 0; i < jsonArray.length(); i++) {
-                            JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                            int staffID = jsonObject.getInt("staffID");
-                            String firstName = jsonObject.getString("firstName");
-
-                            String middleName = jsonObject.getString("middleName");
-                            String lastName = jsonObject.getString("lastName");
-                            String type = jsonObject.getString("type");
-                            String department = jsonObject.getString("department");
-                            dbHandler1.syncStaffTable(staffID,firstName,middleName,lastName,type,department);
-
-                        }
-
-                        //Log.i("Response",resString);
-
-                        response.close();
-                        return resString;
-                    } catch (Exception e){
-                        e.printStackTrace();
+                        String middleName = jsonObject.getString("middleName");
+                        String lastName = jsonObject.getString("lastName");
+                        String type = jsonObject.getString("type");
+                        String department = jsonObject.getString("department");
+                        dbHandler1.syncStaffTable(staffID,firstName,middleName,lastName,type,department);
 
                     }
-                    return null;
-                });
+
+                    response.close();
+
+                } catch (Exception e){
+                    e.printStackTrace();
+
+                }
 
                 /*
-
-
 
                 Statement statement = connection.createStatement();
                 ResultSet resultSet = statement.executeQuery(sql);
@@ -1477,7 +1339,6 @@ public class NewIssue extends AppCompatActivity {
                 connection.close();
 
                  */
-
 
             } catch (Exception e) {
                 Log.e("STAFF ADD FAILED", "Error adding staff", e);

@@ -153,6 +153,7 @@ public class BiometricLogin extends AppCompatActivity {
                     } else if (resString.equals("verified")) {
 
                         Intent intent = new Intent(BiometricLogin.this, FingerPrint.class);
+                        intent.putExtra("can_number",can_entry.getText().toString());
                         startActivity(intent);
 
                     }
