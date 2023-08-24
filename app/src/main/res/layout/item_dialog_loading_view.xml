@@ -15,6 +15,6 @@
         android:layout_marginEnd="18dp"
         android:layout_marginBottom="18dp"
         app:clockwise="true"
-        app:spinnerColor="@color/app_color" />
+        app:spinnerColor="@color/accent" />
 
 </RelativeLayout>
