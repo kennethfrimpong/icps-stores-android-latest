@@ -13,6 +13,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
@@ -55,6 +56,7 @@ public class BiometricLogin extends AppCompatActivity {
     private String resString;
 
     private LinearProgressIndicator linearProgressIndicator;
+    private MaterialButton configure_button;
 
     MaterialCardView fingerOne, fingerTwo, fingerThree, fingerFour;
 
@@ -73,8 +75,8 @@ public class BiometricLogin extends AppCompatActivity {
         can_fetch_status = findViewById(R.id.can_fetch_status);
         linearProgressIndicator = findViewById(R.id.can_fetch_lpi);
         can_fetch_status = findViewById(R.id.can_fetch_status);
+        configure_button = findViewById(R.id.configure_button);
         configureHttpConnectionWithSSL();
-
 
     }
 
@@ -138,6 +140,7 @@ public class BiometricLogin extends AppCompatActivity {
                             linearProgressIndicator.setVisibility(View.GONE);
                             can_entry_layout.setVisibility(View.GONE);
                             fingerprint_layout.setVisibility(View.VISIBLE);
+                            configure_button.setVisibility(View.GONE);
                             login_helper.setText("Choose finger to scan");
                             Toast.makeText(getApplicationContext(),"Choose finger to scan",Toast.LENGTH_SHORT).show();
 
@@ -238,6 +241,7 @@ public class BiometricLogin extends AppCompatActivity {
 
     public void restart_login(View view) {
         can_entry_layout.setVisibility(View.VISIBLE);
+        configure_button.setVisibility(View.VISIBLE);
         fingerprint_layout.setVisibility(View.GONE);
         login_helper.setText("Place your card at the top \nand enter  Ghana Card CAN number");
         Toast.makeText(getApplicationContext(),"Biometric Login Restarted",Toast.LENGTH_SHORT).show();
