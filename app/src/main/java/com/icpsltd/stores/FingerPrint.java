@@ -72,6 +72,8 @@ public class FingerPrint extends AppCompatActivity {
         try{
             can_number = getIntent().getStringExtra("can_number");
             can_number_textview.setText("CAN #: "+can_number);
+            CardReading cardReading = new CardReading();
+            cardReading.execute();
         } catch (Exception e){
             e.printStackTrace();
             can_number_textview.setVisibility(View.GONE);
@@ -145,7 +147,7 @@ public class FingerPrint extends AppCompatActivity {
         @Override
         protected Boolean doInBackground(Object... objects) {
 //
-            //cardDetails = Functions.readGhanaCard(FingerPrint.this, canNumber, finger_1, finger_2, finger_3, finger_4);
+            cardDetails = Functions.readGhanaCard(FingerPrint.this, can_number, finger_one_textview, finger_two_textview, finger_three_textview, finger_four_textview);
             //Functions.arrangeFingers(finger_1,finger_2,finger_3,finger_4,cardDetails.getGhanaIdCardFpTemplateInfosList());
             //Functions.openFingerPrintReader();
             App.BioManager.openFingerprintReader(mFingerprintOpenCloseListener);
