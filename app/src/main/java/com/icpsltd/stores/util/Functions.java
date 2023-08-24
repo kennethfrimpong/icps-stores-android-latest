@@ -4,20 +4,24 @@ import static com.credenceid.biometrics.Biometrics.ResultCode.FAIL;
 import static com.credenceid.biometrics.Biometrics.ResultCode.OK;
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.credenceid.biometrics.Biometrics;
 import com.credenceid.icao.GIdData;
 import com.credenceid.icao.GhanaIdCardFpTemplateInfo;
 import com.credenceid.icao.ICAOReadIntermediateCode;
+import com.gmail.samehadar.iosdialog.CamomileSpinner;
 import com.icpsltd.stores.R;
 import com.icpsltd.stores.model.CardDetails;
 import com.icpsltd.stores.setting.DialogResult;
@@ -186,6 +190,55 @@ public class Functions {
         });
         return cardDetails;
 
+    }
+
+    public static Dialog dialog;
+
+    public static void Show_loader(Context context, boolean outside_touch, boolean cancleable) {
+        dialog = new Dialog(context);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.item_dialog_loading_view);
+        dialog.getWindow().setBackgroundDrawable(context.getResources().getDrawable(R.drawable.d_round_white_background));
+
+
+        CamomileSpinner loader = dialog.findViewById(R.id.loader);
+        loader.start();
+
+
+        if (!outside_touch)
+            dialog.setCanceledOnTouchOutside(false);
+
+        if (!cancleable)
+            dialog.setCancelable(false);
+
+        dialog.show();
+    }
+
+
+    public static void cancel_loader() {
+        if (dialog != null) {
+            dialog.cancel();
+        }
+    }
+
+    public static AlertDialog showNotVerifiedDialog(Context context, String shortID, View.OnClickListener okListener, View.OnClickListener retryListener) {
+        DialogResult dialogResult = getDialog(context, R.layout.dialog_failed);
+
+        TextView trnxId = dialogResult.getView().findViewById(R.id.txtShortId);
+        trnxId.setText(shortID.toUpperCase());
+        Button btnOk = dialogResult.getView().findViewById(R.id.btn_ok);
+        Button btnRetry = dialogResult.getView().findViewById(R.id.btn_retry);
+
+        btnOk.setOnClickListener(okListener);
+        btnRetry.setOnClickListener(retryListener);
+
+        return dialogResult.getAlertDialog();
+    }
+
+    public static void show_toast(Context context, String msg) {
+        //if(Variables.is_toast_enable) {
+        Toast.makeText(context, "" + msg, Toast.LENGTH_LONG).show();
+        //}
     }
 
 }

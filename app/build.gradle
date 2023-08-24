@@ -55,5 +55,6 @@ dependencies {
     implementation "androidx.camera:camera-camera2:${camerax_version}"
     implementation "androidx.camera:camera-view:${camerax_version}"
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
+    implementation 'com.gmail.samehadar:iosdialog:1.0'
 
 }
