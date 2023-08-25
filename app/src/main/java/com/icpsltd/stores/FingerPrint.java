@@ -53,6 +53,8 @@ public class FingerPrint extends AppCompatActivity {
     private TextView login_helper, finger_one_textview, finger_two_textview, finger_three_textview, finger_four_textview, can_number_textview;
     private String can_number;
 
+    private ImageView finger_one_imageView, finger_two_imageView, finger_three_imageView, finger_four_imageView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,6 +71,12 @@ public class FingerPrint extends AppCompatActivity {
         finger_three_textview = findViewById(R.id.finger_three_tv);
         finger_four_textview = findViewById(R.id.finger_four_tv);
         can_number_textview = findViewById(R.id.can_number_tv);
+
+        //finger Imageviews
+        finger_one_imageView = findViewById(R.id.finger_one_imageView);
+        finger_two_imageView = findViewById(R.id.finger_two_imageView);
+        finger_three_imageView = findViewById(R.id.finger_three_imageView);
+        finger_four_imageView = findViewById(R.id.finger_four_imageView);
 
         try{
             can_number = getIntent().getStringExtra("can_number");
