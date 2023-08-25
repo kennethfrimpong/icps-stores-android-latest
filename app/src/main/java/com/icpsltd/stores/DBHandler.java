@@ -381,6 +381,23 @@ public class DBHandler extends SQLiteOpenHelper {
         }
     }
 
+    public void syncStockTable(Integer ID, String productName, String productDesc, Integer productQuantity, String productStore, String productLocation, String productUnit) {
+
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+
+        values.put(stockID, ID);
+        values.put(stockProductName, productName);
+        values.put(stockProductDesc, productDesc);
+        values.put(stockProductQuantity, productQuantity);
+        values.put(stockProductStore, productStore);
+        values.put(stockProductLocation, productLocation);
+        values.put("ProductUnit",productUnit);
+
+        db.insertWithOnConflict(TABLE, null, values,SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
     public String getFirstName() {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery("SELECT firstName FROM currentUserTable WHERE sessionToken = 1",null);

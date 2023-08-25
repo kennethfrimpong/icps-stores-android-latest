@@ -304,16 +304,12 @@ public class NewIssue extends AppCompatActivity {
                 && touchY >= bottomSheetTop && touchY <= bottomSheetBottom;
     }
 
-
-    private void fetchReceiverInfo() {
-
-
-        FetchStaffTable fetchStaffTable = new FetchStaffTable(new FetchStaffTaskListener() {
+    private void fetchReceiverInfo(){
+        FetchReceiverInfo fetchReceiverInfo = new FetchReceiverInfo(new FetchReceiverInfoListener() {
             @Override
-            public void onTaskComplete(Connection connection) {
+            public void onTaskComplete(JSONArray jsonArray) {
 
                 MaterialAutoCompleteTextView materialAutoCompleteTextView = findViewById(R.id.receiver_name);
-
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -396,15 +392,13 @@ public class NewIssue extends AppCompatActivity {
                 materialAutoCompleteTextView.setThreshold(0);
                 materialAutoCompleteTextView.setAdapter(arrayAdapter);
                 arrayAdapter.notifyDataSetChanged();
-
-
-
+                
             }
         });
-        fetchStaffTable.execute();
-
+        fetchReceiverInfo.execute();
 
     }
+
 
     public void ongoingIssue(){
         fetchedOngoingIssueTable = new ArrayList<>();
@@ -706,6 +700,213 @@ public class NewIssue extends AppCompatActivity {
 
 
     }
+
+    public void fetchStockTable(){
+
+        int layout = R.layout.add_issue_item;
+        View bottomSheetView = LayoutInflater.from(this).inflate(layout, null);
+
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
+        bottomSheetDialog.setContentView(bottomSheetView);
+        LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
+        linearProgressIndicator.setVisibility(View.VISIBLE);
+        searchString = bottomSheetDialog.findViewById(R.id.stockSearch);
+        ListView listView = (ListView) bottomSheetDialog.findViewById(R.id.add_items_listview);
+        DBHandler dbHandler = new DBHandler(getApplicationContext());
+        SQLiteDatabase db = dbHandler.getReadableDatabase();
+        searchString.setInputType(InputType.TYPE_CLASS_TEXT);
+        GetStockTable getStockTable = new GetStockTable(new GetStockTableListener() {
+            @Override
+            public void onTaskComplete(JSONArray jsonArray) {
+                Log.i("checkpoint","Task Completed");
+
+                try{
+                    DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                        int id = jsonObject.getInt("id");
+                        String productName = jsonObject.getString("productName");
+
+                        String productDesc = jsonObject.getString("productDesc");
+                        int productQuantity = jsonObject.getInt("productQuantity");
+                        String productStore = jsonObject.getString("productStore");
+                        String productLocation = jsonObject.getString("productLocation");
+                        String productUnit = jsonObject.getString("productUnit");
+                        dbHandler1.syncStockTable(id,productName,productDesc,productQuantity,productStore,productLocation,productUnit);
+
+                    }
+                    Log.i("checkpoint","INSERT COMPLETED");
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.i("checkpoint","UI Thread started");
+                            linearProgressIndicator.setVisibility(View.GONE);
+
+                            fetchedStockTable = new ArrayList<>();
+                            DBHandler dbHandler = new DBHandler(getApplicationContext());
+                            SQLiteDatabase db = dbHandler.getReadableDatabase();
+                            Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM stockTable LIMIT 10",null);
+                            while (cursor.moveToNext()){
+                                Integer id = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                                String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
+                                Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                                String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
+                                String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
+                                String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
+                                String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                                Log.e("Retrieved",name);
+
+                                RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit);
+                                fetchedStockTable.add(retrievedStock);
+
+                            }
+                            adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
+                                @Override
+                                public View getView(int position, View convertView, ViewGroup parent) {
+                                    View view = super.getView(position, convertView, parent);
+
+                                    TextView store_location = view.findViewById(R.id.store_location);
+                                    TextView product_name = view.findViewById(R.id.product_name);
+                                    TextView product_quantity = view.findViewById(R.id.product_quantity);
+                                    TextView product_location = view.findViewById(R.id.product_location);
+                                    RetrievedStock retrievedStock = getItem(position);
+                                    product_name.setText(retrievedStock.getName());
+                                    store_location.setText(retrievedStock.getStore());
+                                    product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
+                                    product_location.setText(retrievedStock.getLocation());
+
+
+                                    return view;
+                                }
+                            };
+
+                            assert listView != null;
+                            listView.setAdapter(adapter);
+                            adapter.notifyDataSetChanged();
+
+                            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                                @Override
+                                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                    RetrievedStock retrievedStock = adapter.getItem(position);
+                                    TextInputLayout textInputLayout = bottomSheetDialog.findViewById(R.id.search_item_box);
+                                    textInputLayout.setVisibility(View.GONE);
+                                    listView.setVisibility(View.GONE);
+                                    MaterialButton materialButton = bottomSheetDialog.findViewById(R.id.search_item_button);
+                                    materialButton.setVisibility(View.GONE);
+
+                                    InputMethodManager manager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                                    manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+
+
+                                    //Set issue quantity views visible
+
+                                    MaterialButton materialButton2 = bottomSheetDialog.findViewById(R.id.item_code_display);
+                                    materialButton2.setVisibility(View.VISIBLE);
+
+                                    ConstraintLayout constraintLayout1 = bottomSheetDialog.findViewById(R.id.name_box);
+                                    constraintLayout1.setVisibility(View.VISIBLE);
+
+
+                                    ConstraintLayout constraintLayout2 = bottomSheetDialog.findViewById(R.id.location_box);
+                                    constraintLayout2.setVisibility(View.VISIBLE);
+
+                                    ConstraintLayout constraintLayout3 = bottomSheetDialog.findViewById(R.id.store_box);
+                                    constraintLayout3.setVisibility(View.VISIBLE);
+
+                                    ConstraintLayout constraintLayout4 = bottomSheetDialog.findViewById(R.id.quantity_box);
+                                    constraintLayout4.setVisibility(View.VISIBLE);
+
+                                    TextInputLayout textInputLayout2 = bottomSheetDialog.findViewById(R.id.quantity_entry_box);
+                                    textInputLayout2.setVisibility(View.VISIBLE);
+
+                                    MaterialButton materialButton3 = bottomSheetDialog.findViewById(R.id.add_item_button);
+                                    materialButton3.setVisibility(View.VISIBLE);
+
+                                    //this populates textviews with selected item
+                                    String name = retrievedStock.getName();
+                                    String location = retrievedStock.getLocation();
+                                    String store = retrievedStock.getStore();
+                                    String retrievedquantity = String.valueOf(retrievedStock.getQuantity());
+                                    String retrievedunit = retrievedStock.getUnit();
+
+                                    TextView name_tv = bottomSheetView.findViewById(R.id.item_name);
+                                    name_tv.setText(name);
+
+                                    TextView location_tv = bottomSheetView.findViewById(R.id.item_location);
+                                    location_tv.setText(location);
+
+                                    TextView store_tv = bottomSheetView.findViewById(R.id.item_store);
+                                    store_tv.setText(store);
+
+                                    TextView qty_tv = bottomSheetView.findViewById(R.id.item_quantity_remaining);
+                                    qty_tv.setText(retrievedquantity+" "+retrievedunit);
+
+                                    CustomEditText customEditText = bottomSheetDialog.findViewById(R.id.issue_quantity);
+
+
+                                    materialButton3.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            //Toast.makeText(getApplicationContext(),String.valueOf(retrievedStock.getID()),Toast.LENGTH_SHORT).show();
+                                            String squantity = customEditText.getText().toString();
+                                            try {
+                                                if (!squantity.equals("") && !squantity.equals("0")){
+                                                    Integer quantity = Integer.valueOf(squantity);
+                                                    if (quantity <= retrievedStock.getQuantity()) {
+                                                        DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+                                                        dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit());
+                                                        Toast.makeText(getApplicationContext(),retrievedStock.getName()+" added successfully",Toast.LENGTH_SHORT).show();
+
+                                                        //update listview
+                                                        runOnUiThread(new Runnable() {
+                                                            @Override
+                                                            public void run() {
+                                                                ongoingIssue();
+                                                            }
+                                                        });
+                                                        bottomSheetDialog.dismiss();
+
+
+
+
+
+                                                    } else if (quantity > retrievedStock.getQuantity()) {
+                                                        Toast.makeText(getApplicationContext(),"Error: Quantity entered exceeds retrieved quantity ",Toast.LENGTH_LONG).show();
+
+                                                    }
+                                                } else {
+                                                    Toast.makeText(getApplicationContext(),"Enter a valid quantity ",Toast.LENGTH_LONG).show();
+                                                }
+
+                                            } catch (Exception e){
+                                                Toast.makeText(getApplicationContext(),"Enter a valid number",Toast.LENGTH_LONG).show();
+                                            }
+
+
+
+
+                                        }
+                                    });
+                                }
+                            });
+
+
+                        }
+                    });
+
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+
+
+
+
+            }
+        });
+        getStockTable.execute();
+    }
     public void showBottomSheet(){
 
         int layout = R.layout.add_issue_item;
@@ -721,6 +922,10 @@ public class NewIssue extends AppCompatActivity {
         SQLiteDatabase db = dbHandler.getReadableDatabase();
         searchString.setInputType(InputType.TYPE_CLASS_TEXT);
 
+
+
+
+        /*
 
         FetchStockTable fetchStockTable = new FetchStockTable(new FetchStockTaskListener() {
             @Override
@@ -887,9 +1092,7 @@ public class NewIssue extends AppCompatActivity {
         });
         fetchStockTable.execute();
 
-
-
-
+         */
 
 
 
@@ -928,6 +1131,9 @@ public class NewIssue extends AppCompatActivity {
 
                         if (searchString.getText().toString().length() < 1){
                             //fetches default 5 most issued items if search box is empty, change values in fetchStockStable and here to update results number
+                            fetchStockTable();
+
+                            /*
                             FetchDefaultStockTable fetchDefaultStockTable = new FetchDefaultStockTable(new FetchDefaultStockTaskListener() {
                                 @Override
                                 public void onTaskComplete(Connection connection) {
@@ -976,9 +1182,12 @@ public class NewIssue extends AppCompatActivity {
                             });
                             fetchDefaultStockTable.execute();
 
+                             */
+
 
 
                         } else {
+
                             DBHandler dbHandler1 = new DBHandler(getApplicationContext());
                             dbHandler1.clearStockTable();
 
@@ -1050,6 +1259,7 @@ public class NewIssue extends AppCompatActivity {
             }
         };
         searchString.addTextChangedListener(textWatcher);
+
         searchString.setOnKeyListener(new View.OnKeyListener() {
             @Override
             public boolean onKey(View v, int keyCode, KeyEvent event) {
@@ -1059,6 +1269,11 @@ public class NewIssue extends AppCompatActivity {
                 return true;
             }
         });
+
+
+
+
+
 
 
         bottomSheetDialog.setCanceledOnTouchOutside(true);
@@ -1110,6 +1325,69 @@ public class NewIssue extends AppCompatActivity {
         dbHandler1.clearStockTable();
         showBottomSheet();
 
+    }
+
+    public interface GetStockTableListener {
+        void onTaskComplete(JSONArray jsonArray);
+    }
+
+    public class GetStockTable extends AsyncTask<Void, Void, JSONArray>{
+        private GetStockTableListener listener;
+
+        public GetStockTable(GetStockTableListener listener){
+            this.listener = listener;
+
+        }
+
+
+        @Override
+        protected JSONArray doInBackground(Void... voids) {
+
+            DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+            dbHandler1.clearStockTable();
+            dbHandler1.clearStaffTable();
+            JSONArray jsonArray = null;
+            try {
+
+                String sql = "{\"type\":\"default_stock\"}";
+                //send sql string to api and wait for results.
+                try{
+                    RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
+                    Request request = new Request.Builder()
+                            .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .post(requestBody)
+                            .build();
+                    Response response = okHttpClient.newCall(request).execute();
+                    String resString = response.body().string();
+
+                    jsonArray = new JSONArray(resString);
+
+
+                    response.close();
+
+                } catch (Exception e){
+                    e.printStackTrace();
+
+                }
+
+            } catch (Exception e) {
+                Log.e("STOCK ADD FAILED", "Error adding stock", e);
+
+            }
+
+            return jsonArray;
+
+        }
+
+        @Override
+        protected void onPostExecute(JSONArray jsonArray) {
+            super.onPostExecute(jsonArray);
+            if (listener != null) {
+                listener.onTaskComplete(jsonArray);
+
+            }
+
+        }
     }
 
 
@@ -1263,6 +1541,93 @@ public class NewIssue extends AppCompatActivity {
                 listener.onTaskComplete(connection);
             }
             
+        }
+    }
+
+    public interface FetchReceiverInfoListener {
+        void onTaskComplete(JSONArray jsonArray);
+    }
+
+    public class FetchReceiverInfo extends AsyncTask<Void, Void, JSONArray>{
+        private FetchReceiverInfoListener listener;
+
+        public FetchReceiverInfo(FetchReceiverInfoListener listener){
+            this.listener = listener;
+
+        }
+
+
+        @Override
+        protected JSONArray doInBackground(Void... voids) {
+
+            DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+            dbHandler1.clearStockTable();
+            dbHandler1.clearStaffTable();
+            JSONArray jsonArray = null;
+            try {
+                dbHandler1.clearStaffTable();
+                String searchedString = searchStaff.getText().toString();
+                String matchesWholeWord = searchedString;
+                String startsWith = searchedString+"%";
+                String withHyphen = searchedString+"-%";
+                String startsWithWordInSentence = "% "+searchedString+"%";
+                Log.i("SearchTest","Updated Search Started");
+                //Cursor cursor = db.rawQuery(,null);
+                String sql = "{\"query\":\"firstName LIKE \'"+matchesWholeWord+"\' OR firstName LIKE \'"+startsWith+"\' OR firstName LIKE \'"+withHyphen+"\' OR firstName LIKE \'"+startsWithWordInSentence+"\' OR middleName LIKE \'"+startsWith+"\' OR middleName LIKE \'"+matchesWholeWord+"\' OR middleName LIKE \'"+startsWithWordInSentence+"\' OR lastName LIKE \'"+startsWith+"\' OR lastName LIKE \'"+matchesWholeWord+"\' OR lastName LIKE \'"+startsWithWordInSentence+"\' LIMIT 6\",\"type\":\"staff_fetch\"}";
+                //send sql string to api and wait for results.
+                try{
+                    RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
+                    Request request = new Request.Builder()
+                            .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .post(requestBody)
+                            .build();
+                    Response response = okHttpClient.newCall(request).execute();
+                    String resString = response.body().string();
+
+                    jsonArray = new JSONArray(resString);
+
+
+                    response.close();
+
+                } catch (Exception e){
+                    e.printStackTrace();
+
+                }
+
+            } catch (Exception e) {
+                Log.e("STAFF ADD FAILED", "Error adding staff", e);
+
+            }
+
+            return jsonArray;
+
+        }
+
+        @Override
+        protected void onPostExecute(JSONArray jsonArray) {
+            super.onPostExecute(jsonArray);
+            if (listener != null) {
+                try{
+                    DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                        int staffID = jsonObject.getInt("staffID");
+                        String firstName = jsonObject.getString("firstName");
+
+                        String middleName = jsonObject.getString("middleName");
+                        String lastName = jsonObject.getString("lastName");
+                        String type = jsonObject.getString("type");
+                        String department = jsonObject.getString("department");
+                        dbHandler1.syncStaffTable(staffID,firstName,middleName,lastName,type,department);
+
+                    }
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+                listener.onTaskComplete(jsonArray);
+            }
+
         }
     }
 

@@ -59,6 +59,7 @@
             android:textColorHint="@color/black"/>
             -->
     </com.google.android.material.textfield.TextInputLayout>
+
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/fetch_progress"
         android:layout_width="match_parent"
