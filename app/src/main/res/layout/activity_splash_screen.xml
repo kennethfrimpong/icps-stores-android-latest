@@ -18,15 +18,13 @@
         android:layout_marginBottom="50dp"/>
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
-        android:layout_width="match_parent"
+        android:layout_width="200dp"
         android:layout_height="wrap_content"
         app:indeterminateAnimationType="disjoint"
         android:indeterminate="true"
         app:layout_constraintTop_toBottomOf="@id/logo"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:paddingStart="40dp"
-        android:paddingEnd="40dp"
+        app:layout_constraintStart_toStartOf="@id/logo"
+        app:layout_constraintEnd_toEndOf="@id/logo"
         android:layout_marginTop="20dp"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
