@@ -101,7 +101,8 @@ public class FingerPrint extends AppCompatActivity {
                     fingerTwo.setStrokeColor(Color.BLACK);
                     fingerThree.setStrokeColor(Color.BLACK);
                     fingerFour.setStrokeColor(Color.BLACK);
-                    //captureFingerprintOne(fingerOne);
+                    selectedFingerIndex = 1;
+                    captureFingerprintOne(finger_one_imageView);
                 }
             });
 
@@ -112,7 +113,8 @@ public class FingerPrint extends AppCompatActivity {
                     fingerTwo.setStrokeColor(Color.GREEN);
                     fingerThree.setStrokeColor(Color.BLACK);
                     fingerFour.setStrokeColor(Color.BLACK);
-
+                    selectedFingerIndex = 2;
+                    captureFingerprintOne(finger_two_imageView);
                 }
             });
 
@@ -123,7 +125,8 @@ public class FingerPrint extends AppCompatActivity {
                     fingerTwo.setStrokeColor(Color.BLACK);
                     fingerThree.setStrokeColor(Color.GREEN);
                     fingerFour.setStrokeColor(Color.BLACK);
-
+                    selectedFingerIndex = 3;
+                    captureFingerprintOne(finger_three_imageView);
                 }
             });
 
@@ -134,6 +137,8 @@ public class FingerPrint extends AppCompatActivity {
                     fingerTwo.setStrokeColor(Color.BLACK);
                     fingerThree.setStrokeColor(Color.BLACK);
                     fingerFour.setStrokeColor(Color.GREEN);
+                    selectedFingerIndex = 4;
+                    captureFingerprintOne(finger_four_imageView);
 
                 }
             });
