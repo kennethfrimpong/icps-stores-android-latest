@@ -8,6 +8,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,8 +32,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+import de.mrapp.android.dialog.MaterialDialog;
+
 public class Functions {
     private static AlertDialog alertDialog;
+    private static MaterialDialog.Builder dialogBuilder = null;
+    private static MaterialDialog dialogMaterial = null;
 
     public static CardDetails cardDetails = null;
 
@@ -70,6 +75,8 @@ public class Functions {
         btnOk.setOnClickListener(okListener);
         return dialogResult.getAlertDialog();
     }
+
+
 
     public static CardDetails readGhanaCard(Context context, String canNumber, TextView finger1, TextView finger2, TextView finger3, TextView finger4) {
         String startTime = dateTimeFormat.format(new Date());
@@ -240,6 +247,32 @@ public class Functions {
         //if(Variables.is_toast_enable) {
         Toast.makeText(context, "" + msg, Toast.LENGTH_LONG).show();
         //}
+    }
+
+    public static void Show_Alert2(Context context, String title, String Message) {
+        dialogBuilder = new MaterialDialog.Builder(context);
+        dialogBuilder.setTitle(title);
+        dialogBuilder.setMessage(Message);
+        dialogMaterial = dialogBuilder.create();
+        dialogMaterial.show();
+    }
+
+    public static void hide_Alert2() {
+        if (dialogMaterial != null && dialogMaterial.isShowing()) {
+            dialogMaterial.dismiss();
+        }
+    }
+
+    public static SharedPreferences getSharedPreference(Context context) {
+        if (Variables.sharedPreferences == null) {
+            Variables.sharedPreferences = context.getSharedPreferences(Variables.pref_name, Context.MODE_PRIVATE);
+        }
+        return Variables.sharedPreferences;
+    }
+
+    public static SharedPreferences.Editor getEditor(Context context) {
+        SharedPreferences.Editor editor = getSharedPreference(context).edit();
+        return editor;
     }
 
 }

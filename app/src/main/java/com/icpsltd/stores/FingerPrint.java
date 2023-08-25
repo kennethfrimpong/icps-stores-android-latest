@@ -82,54 +82,55 @@ public class FingerPrint extends AppCompatActivity {
             can_number_textview.setVisibility(View.GONE);
         }
 
-//        runOnUiThread(()->{
-//            login_helper.setText("Choose finger to scan");
-//            Toast.makeText(getApplicationContext(),"Choose finger to scan",Toast.LENGTH_SHORT).show();
-//
-//            fingerOne.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    fingerOne.setStrokeColor(Color.GREEN);
-//                    fingerTwo.setStrokeColor(Color.BLACK);
-//                    fingerThree.setStrokeColor(Color.BLACK);
-//                    fingerFour.setStrokeColor(Color.BLACK);
-//                }
-//            });
-//
-//            fingerTwo.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    fingerOne.setStrokeColor(Color.BLACK);
-//                    fingerTwo.setStrokeColor(Color.GREEN);
-//                    fingerThree.setStrokeColor(Color.BLACK);
-//                    fingerFour.setStrokeColor(Color.BLACK);
-//
-//                }
-//            });
-//
-//            fingerThree.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    fingerOne.setStrokeColor(Color.BLACK);
-//                    fingerTwo.setStrokeColor(Color.BLACK);
-//                    fingerThree.setStrokeColor(Color.GREEN);
-//                    fingerFour.setStrokeColor(Color.BLACK);
-//
-//                }
-//            });
-//
-//            fingerFour.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    fingerOne.setStrokeColor(Color.BLACK);
-//                    fingerTwo.setStrokeColor(Color.BLACK);
-//                    fingerThree.setStrokeColor(Color.BLACK);
-//                    fingerFour.setStrokeColor(Color.GREEN);
-//
-//                }
-//            });
-//
-//        });
+        runOnUiThread(()->{
+            login_helper.setText("Choose finger to scan");
+            Toast.makeText(getApplicationContext(),"Choose finger to scan",Toast.LENGTH_SHORT).show();
+
+            fingerOne.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    fingerOne.setStrokeColor(Color.GREEN);
+                    fingerTwo.setStrokeColor(Color.BLACK);
+                    fingerThree.setStrokeColor(Color.BLACK);
+                    fingerFour.setStrokeColor(Color.BLACK);
+                    //captureFingerprintOne(fingerOne);
+                }
+            });
+
+            fingerTwo.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    fingerOne.setStrokeColor(Color.BLACK);
+                    fingerTwo.setStrokeColor(Color.GREEN);
+                    fingerThree.setStrokeColor(Color.BLACK);
+                    fingerFour.setStrokeColor(Color.BLACK);
+
+                }
+            });
+
+            fingerThree.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    fingerOne.setStrokeColor(Color.BLACK);
+                    fingerTwo.setStrokeColor(Color.BLACK);
+                    fingerThree.setStrokeColor(Color.GREEN);
+                    fingerFour.setStrokeColor(Color.BLACK);
+
+                }
+            });
+
+            fingerFour.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    fingerOne.setStrokeColor(Color.BLACK);
+                    fingerTwo.setStrokeColor(Color.BLACK);
+                    fingerThree.setStrokeColor(Color.BLACK);
+                    fingerFour.setStrokeColor(Color.GREEN);
+
+                }
+            });
+
+        });
     }
 
     public void restart_login(View view) {

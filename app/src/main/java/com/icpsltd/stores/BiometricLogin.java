@@ -1,52 +1,29 @@
 package com.icpsltd.stores;
 
-import static com.credenceid.biometrics.Biometrics.ResultCode.FAIL;
-import static com.credenceid.biometrics.Biometrics.ResultCode.INTERMEDIATE;
-import static com.credenceid.biometrics.Biometrics.ResultCode.OK;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
-
-import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+
 import com.credenceid.biometrics.Biometrics;
-import com.credenceid.biometrics.BiometricsManager;
-import com.credenceid.icao.GhanaIdCardFpTemplateInfo;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
-import com.icpsltd.stores.model.CardDetails;
 import com.icpsltd.stores.util.App;
 import com.icpsltd.stores.util.Functions;
-
-import org.json.JSONObject;
+import com.icpsltd.stores.util.Variables;
 
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -56,8 +33,6 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class BiometricLogin extends AppCompatActivity {
@@ -82,6 +57,9 @@ public class BiometricLogin extends AppCompatActivity {
 
     private MaterialButton loginButton;
 
+    private static Biometrics.OnCardStatusListener onCardStatusListener;
+
+
     MaterialCardView fingerOne, fingerTwo, fingerThree, fingerFour;
 
     @Override
@@ -104,8 +82,10 @@ public class BiometricLogin extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        OpenCardReaderAsync openCardReaderAsync = new OpenCardReaderAsync();
+        openCardReaderAsync.execute();
 
-        initializeBiometrics();
+
        // configureHttpConnectionWithSSL();
 
     }
@@ -295,24 +275,121 @@ public class BiometricLogin extends AppCompatActivity {
         Intent intent = new Intent(BiometricLogin.this,Configure.class);
         startActivity(intent);
     }
-    private void initializeBiometrics() {
-        App.Context = getApplicationContext();
-        App.BioManager = new BiometricsManager(getApplicationContext());
-        App.BioManager.initializeBiometrics(new Biometrics.OnInitializedListener() {
+
+    private class OpenCardReaderAsync extends AsyncTask<Object, Boolean, Boolean> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            Functions.Show_loader(BiometricLogin.this, false, true);
+//            Functions.fetchAndSaveUsers(LoginActivity.this);
+        }
+
+        @Override
+        protected Boolean doInBackground(Object... objects) {
+            openCardReader();
+            return true;
+        }
+
+        protected void onPostExecute() {
+            Functions.cancel_loader();
+            //Functions.arrangeFingers(finger_1,finger_2,finger_3,finger_4,cardDetails.getGhanaIdCardFpTemplateInfosList());
+
+        }
+
+    }
+
+    public void openCardReaderMain() {
+      //  SharedPreferences.Editor editor = Functions.getEditor(LoginActivity.this);
+        App.BioManager.cardOpenCommand(new Biometrics.CardReaderStatusListener() {
             @Override
-            public void onInitialized(Biometrics.ResultCode resultCode, String s, String s1) {
+            public void onCardReaderOpen(Biometrics.ResultCode resultCode) {
                 if (resultCode == Biometrics.ResultCode.OK) {
-                    App.deviceFamily = App.BioManager.getDeviceFamily();
-                    App.deviceType = App.BioManager.getDeviceType();
 
+                    onCardStatusListener = new Biometrics.OnCardStatusListener() {
+                        @Override
+                        public void onCardStatusChange(String s, int prevState, int currentState) {
+                            if (Variables.CARD_ABSENT == currentState) {
+                                Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "PLEASE INSERT CARD");
+                            } else {
+                                Variables.mIsDocPresentOnEPassport = true;
+                                Functions.hide_Alert2();
+                            }
+                        }
+                    };
 
-
+                    App.BioManager.registerCardStatusListener(onCardStatusListener);
+                    Functions.cancel_loader();
                 } else {
-                    Functions.Show_Alert(getApplicationContext(), "BioManager Initialization", "Initialization Failed");
+                    Functions.cancel_loader();
+                    Functions.Show_Alert2(BiometricLogin.this, "Card Opening Error", "Error Opening Card Reader" + resultCode.toString());
                 }
             }
 
+            @Override
+            public void onCardReaderClosed(Biometrics.ResultCode resultCode, Biometrics.CloseReasonCode closeReasonCode) {
+                Functions.cancel_loader();
+//                editor.putBoolean(Variables.is_card_reader_open, false);
+//                editor.commit();
+//                loginNotification.setText(Variables.restart_app);
+//                btnLogin.setEnabled(false);
+                //Functions.Show_Alert(LoginActivity.this,"Card Closed","Error Opening Card Reader");
+            }
         });
+    }
+
+    private void openCardReader() {
+        boolean isCardReaderOpened = Functions.getSharedPreference(BiometricLogin.this).getBoolean(Variables.is_card_reader_open, false);
+
+        if (isCardReaderOpened == false) {
+            openCardReaderMain();
+        } else {
+            boolean cardConnection = App.BioManager.cardConnectSync(1000);
+            if (cardConnection) {
+                onCardStatusListener = new Biometrics.OnCardStatusListener() {
+                    @Override
+                    public void onCardStatusChange(String s, int prevState, int currentState) {
+                        if (Variables.CARD_ABSENT == currentState) {
+                            Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "PLEASE INSERT CARD");
+                        } else {
+                            Variables.mIsDocPresentOnEPassport = true;
+                            Functions.hide_Alert2();
+
+                        }
+                    }
+                };
+                App.BioManager.registerCardStatusListener(onCardStatusListener);
+                Functions.cancel_loader();
+            } else {
+                openCardReaderMain();
+            }
+        }
+
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        onCardStatusListener = (String ATR,
+                                int prevState,
+                                int currentState) -> {
+            /* If currentState is 1, then no card is present. */
+            if (Variables.CARD_ABSENT == currentState) {
+                Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "PLEASE INSERT CARD");
+            } else {
+                Variables.mIsDocPresentOnEPassport = true;
+
+                //CardDetails cardDetails = Functions.readGhanaCard(LoginActivity.this,"990409");
+                //Log.d(Variables.TAG,cardDetails.toString());
+                //readGhanaIdDocument(canNumber);
+            }
+
+
+        };
+
+        App.BioManager.registerCardStatusListener(onCardStatusListener);
+
     }
 
 }
