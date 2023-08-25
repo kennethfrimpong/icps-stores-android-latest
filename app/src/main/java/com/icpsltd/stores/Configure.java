@@ -67,7 +67,8 @@ public class Configure extends AppCompatActivity {
     }
 
     public void go_back(View view) {
-        Intent intent = new Intent(Configure.this, MainActivity.class);
+        Intent intent = new Intent(Configure.this, BiometricLogin.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
 

@@ -27,14 +27,31 @@ import com.icpsltd.stores.model.CardDetailsSummary;
 import com.icpsltd.stores.util.App;
 import com.icpsltd.stores.util.Functions;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class FingerPrint extends AppCompatActivity {
 
@@ -54,6 +71,7 @@ public class FingerPrint extends AppCompatActivity {
     private String can_number;
 
     private ImageView finger_one_imageView, finger_two_imageView, finger_three_imageView, finger_four_imageView;
+    private OkHttpClient okHttpClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -144,6 +162,54 @@ public class FingerPrint extends AppCompatActivity {
             });
 
         });
+
+        configureOKhttp();
+    }
+
+    private void configureOKhttp() {
+        try{
+            DBHandler dbHandler = new DBHandler(getApplicationContext());
+            InputStream certInputStream = getResources().openRawResource(R.raw.localhost);
+
+            CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+            X509Certificate certificate = (X509Certificate) certificateFactory.generateCertificate(certInputStream);
+
+            KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keystore.load(null,null);
+            keystore.setCertificateEntry("localhost",certificate);
+
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init(keystore);
+            TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null,trustManagers,null);
+            String apiHost = dbHandler.getApiHost();
+
+            //remove this when ca trusted SSL is available and traffic is over https, remove hostname verifier method too in OkHttp builder
+
+            HostnameVerifier hostnameVerifier = new HostnameVerifier() {
+                @Override
+                public boolean verify(String hostname, SSLSession session) {
+                    if (hostname.equals(apiHost)){
+                        return true;
+                    } else {
+                        runOnUiThread(()->{ Toast.makeText(FingerPrint.this, "SSL certificate hostname mismatch", Toast.LENGTH_SHORT).show(); });
+
+                        return false;
+
+                    }
+
+                }
+            };
+            okHttpClient = new OkHttpClient.Builder()
+                    .sslSocketFactory(sslContext.getSocketFactory(),(X509TrustManager) trustManagers[0])
+                    .hostnameVerifier(hostnameVerifier)
+                    .build();
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public void restart_login(View view) {
@@ -321,7 +387,7 @@ public class FingerPrint extends AppCompatActivity {
 
                 if(resultCode == OK)
                 {
-                    Functions.show_toast(FingerPrint.this,"FINISHED VERIFICATION");
+                    Functions.show_toast(FingerPrint.this,"Authenticated Successfully");
                     if(v >70.0)
                     {
 
@@ -332,6 +398,45 @@ public class FingerPrint extends AppCompatActivity {
                             nhisData.put("bioMatchResult","MFP");
                             nhisData.put("cardNo",cardDetailToHold.getCardNumber());
                             nhisData.put("cardType","GHANACARD");
+
+                            try{
+                                GetStaffInfo getStaffInfo = new GetStaffInfo(new GetStaffInfoListener() {
+                                    @Override
+                                    public void onTaskComplete(JSONArray jsonArray) {
+                                        Log.i("biotest1","Full name: "+cardDetailToHold.getFullName());
+                                        Log.i("biotest1","Card Number: "+cardDetailToHold.getCardNumber());
+                                        Log.i("biotest1","DOB: "+cardDetailToHold.getDateOfBirth());
+                                        Log.i("biotest1","Gender: "+cardDetailToHold.getGender());
+
+                                        try{
+                                            DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+                                            for (int i = 0; i < jsonArray.length(); i++) {
+                                                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                                                int staffID = jsonObject.getInt("userID");
+                                                String firstName = jsonObject.getString("firstName");
+                                                String privilege = jsonObject.getString("privilege");
+                                                String lastName = jsonObject.getString("lastName");
+                                                dbHandler1.addUserSession(String.valueOf(staffID),firstName,lastName,privilege,1,null);
+
+                                            }
+                                            MyPrefs myPrefs = new MyPrefs();
+                                            myPrefs.saveLoginStatus(getApplicationContext(),true);
+                                            Intent intent = new Intent(FingerPrint.this, HomePage.class);
+                                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                            startActivity(intent);
+
+                                        } catch (Exception e){
+                                            e.printStackTrace();
+                                        }
+
+                                    }
+                                });
+                                getStaffInfo.execute();
+
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
+
 
                         }catch (Exception e)
                         {
@@ -361,7 +466,8 @@ public class FingerPrint extends AppCompatActivity {
                             App.BioManager.closeFingerprintReader();
                             App.BioManager.cardCloseCommand();
                             App.BioManager.cardDisconnectSync(1);
-                            Intent intent = new Intent(FingerPrint.this, MainActivity.class);
+                            Intent intent = new Intent(FingerPrint.this, BiometricLogin.class);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                             startActivity(intent);
                             finish();
                         }, view -> {
@@ -384,6 +490,70 @@ public class FingerPrint extends AppCompatActivity {
 
     public static List<GhanaIdCardFpTemplateInfo> getGhanaIdCardFpTemplateInfosList() {
         return ghanaIdCardFpTemplateInfosList;
+    }
+
+    public interface GetStaffInfoListener {
+        void onTaskComplete(JSONArray jsonArray);
+    }
+
+    public class GetStaffInfo extends AsyncTask<Void, Void, JSONArray>{
+        private FingerPrint.GetStaffInfoListener listener;
+
+        public GetStaffInfo(FingerPrint.GetStaffInfoListener listener){
+            this.listener = listener;
+
+        }
+
+
+        @Override
+        protected JSONArray doInBackground(Void... voids) {
+
+            DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+            dbHandler1.clearStockTable();
+            dbHandler1.clearStaffTable();
+            JSONArray jsonArray = null;
+            try {
+
+                String sql = "{\"type\":\"staff_login\",\"can_number\":\""+can_number+"\"}";
+                //send sql string to api and wait for results.
+                try{
+                    RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
+                    Request request = new Request.Builder()
+                            .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .post(requestBody)
+                            .build();
+                    Response response = okHttpClient.newCall(request).execute();
+                    String resString = response.body().string();
+
+                    jsonArray = new JSONArray(resString);
+
+
+                    response.close();
+
+                } catch (Exception e){
+                    e.printStackTrace();
+
+                }
+
+            } catch (Exception e) {
+                Log.e("STOCK ADD FAILED", "Error adding stock", e);
+
+            }
+
+            return jsonArray;
+
+        }
+
+        @Override
+        protected void onPostExecute(JSONArray jsonArray) {
+            super.onPostExecute(jsonArray);
+            if (listener != null) {
+                listener.onTaskComplete(jsonArray);
+
+
+            }
+
+        }
     }
 
 }

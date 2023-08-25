@@ -7,10 +7,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.credenceid.biometrics.Biometrics;
 import com.credenceid.biometrics.BiometricsManager;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.icpsltd.stores.util.App;
 import com.icpsltd.stores.util.Functions;
 import com.karumi.dexter.Dexter;
@@ -26,12 +29,34 @@ import java.util.List;
 public class SplashScreen extends AppCompatActivity {
 
     CountDownTimer countDownTimer;
+    private LinearProgressIndicator linearProgressIndicator;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash_screen);
-        initializeBiometrics();
-        requestPermissions();
+
+
+
+        MyPrefs myPrefs = new MyPrefs();
+        if(!myPrefs.getLoginStatus(getApplicationContext())){
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    linearProgressIndicator = findViewById(R.id.splash_progress);
+                    linearProgressIndicator.setVisibility(View.VISIBLE);
+                    ImageView imageView = findViewById(R.id.logo);
+                    imageView.setVisibility(View.VISIBLE);
+
+                }
+            });
+            initializeBiometrics();
+            requestPermissions();
+        } else {
+            Intent intent = new Intent(SplashScreen.this, HomePage.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
+        }
+
 
 
     }
@@ -92,7 +117,12 @@ public class SplashScreen extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        countDownTimer.cancel();
+        try{
+            countDownTimer.cancel();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
 
     private void requestPermissions() {
@@ -148,6 +178,14 @@ public class SplashScreen extends AppCompatActivity {
                 // below line is use to run the permissions
                 // on same thread and to check the permissions
                 .onSameThread().check();
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        moveTaskToBack(true);
+        android.os.Process.killProcess(android.os.Process.myPid());
+        System.exit(0);
     }
 
 }

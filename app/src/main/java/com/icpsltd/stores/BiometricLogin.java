@@ -310,7 +310,7 @@ public class BiometricLogin extends AppCompatActivity {
                         @Override
                         public void onCardStatusChange(String s, int prevState, int currentState) {
                             if (Variables.CARD_ABSENT == currentState) {
-                                Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "PLEASE INSERT CARD");
+                                Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "Place Card on top on the device");
                             } else {
                                 Variables.mIsDocPresentOnEPassport = true;
                                 Functions.hide_Alert2();
@@ -350,7 +350,7 @@ public class BiometricLogin extends AppCompatActivity {
                     @Override
                     public void onCardStatusChange(String s, int prevState, int currentState) {
                         if (Variables.CARD_ABSENT == currentState) {
-                            Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "PLEASE INSERT CARD");
+                            Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "Place Card on top on the device");
                         } else {
                             Variables.mIsDocPresentOnEPassport = true;
                             Functions.hide_Alert2();
@@ -376,7 +376,7 @@ public class BiometricLogin extends AppCompatActivity {
                                 int currentState) -> {
             /* If currentState is 1, then no card is present. */
             if (Variables.CARD_ABSENT == currentState) {
-                Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "PLEASE INSERT CARD");
+                Functions.Show_Alert2(BiometricLogin.this, "CARD ABSENT", "Place Card on top on the device");
             } else {
                 Variables.mIsDocPresentOnEPassport = true;
 

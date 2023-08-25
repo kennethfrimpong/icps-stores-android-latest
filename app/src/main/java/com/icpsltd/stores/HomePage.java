@@ -21,10 +21,12 @@ public class HomePage extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_page);
         DBHandler dbHandler = new DBHandler(getApplicationContext());
+
         MyPrefs myPrefs = new MyPrefs();
         if(!myPrefs.getLoginStatus(getApplicationContext())){
             Toast.makeText(getApplicationContext(),"You need to login first",Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(HomePage.this, MainActivity.class);
+            Intent intent = new Intent(HomePage.this, BiometricLogin.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
 
         } else{
@@ -57,7 +59,8 @@ public class HomePage extends AppCompatActivity {
         super.onStart();
         MyPrefs myPrefs = new MyPrefs();
         if(!myPrefs.getLoginStatus(getApplicationContext())){
-            Intent intent = new Intent(HomePage.this, MainActivity.class);
+            Intent intent = new Intent(HomePage.this, BiometricLogin.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
         }
     }
@@ -67,7 +70,8 @@ public class HomePage extends AppCompatActivity {
         super.onResume();
         MyPrefs myPrefs = new MyPrefs();
         if(!myPrefs.getLoginStatus(getApplicationContext())){
-            Intent intent = new Intent(HomePage.this, MainActivity.class);
+            Intent intent = new Intent(HomePage.this, BiometricLogin.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
         }
 
@@ -84,7 +88,8 @@ public class HomePage extends AppCompatActivity {
                         MyPrefs myPrefs = new MyPrefs();
                         dbHandler.logOut();
                         myPrefs.saveLoginStatus(getApplicationContext(),false);
-                        Intent intent = new Intent(HomePage.this, MainActivity.class);
+                        Intent intent = new Intent(HomePage.this, SplashScreen.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                         startActivity(intent);
                     }
                 }).setNegativeButton("No", new DialogInterface.OnClickListener() {
