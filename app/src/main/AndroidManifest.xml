@@ -17,13 +17,13 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.NFC" />
 
     <uses-feature android:name="android.hardware.location.gps" />
     <uses-feature android:name="android.hardware.location.network" />
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
-
 
     <application
         android:allowBackup="true"
@@ -37,7 +37,15 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
-            android:name=".SplashScreen"
+            android:name=".CardReadTest"
+            android:exported="false" />
+
+        <activity
+            android:name=".activities.AddStaff"
+            android:exported="false" />
+
+        <activity
+            android:name=".biometricactivities.SplashScreen"
             android:exported="true">
 
             <intent-filter>
@@ -47,52 +55,84 @@
             </intent-filter>
 
         </activity>
+
         <activity
-            android:name=".FingerPrint"
+            android:name=".biometricactivities.FingerPrint"
             android:exported="false" />
+
         <activity
-            android:name=".BiometricLogin"
+            android:name=".biometricactivities.BiometricLogin"
             android:exported="true">
+
+            <!--
+             <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            -->
+
         </activity>
         <activity
-            android:name=".StockAdjustment"
+            android:name=".activities.StockAdjustment"
             android:exported="false" />
         <activity
-            android:name=".ReturnStock"
+            android:name=".activities.ReturnStock"
             android:exported="false" />
         <activity
-            android:name=".ScanQR"
+            android:name=".activities.ScanQR"
             android:exported="false" />
         <activity
-            android:name=".QueryByLocation"
+            android:name=".activities.QueryByLocation"
             android:exported="false" />
         <activity
-            android:name=".QueryByProduct"
+            android:name=".activities.QueryByProduct"
             android:exported="false" />
         <activity
-            android:name=".IssueHistory"
+            android:name=".activities.IssueHistory"
             android:exported="false" />
         <activity
-            android:name=".AddStock"
+            android:name=".activities.AddStock"
             android:exported="false" />
         <activity
-            android:name=".ReceiptPage"
+            android:name=".activities.ReceiptPage"
             android:exported="false" />
         <activity
-            android:name=".NewIssue"
+            android:name=".activities.NewIssue"
             android:exported="false"
-            android:windowSoftInputMode="stateAlwaysHidden" />
+            android:windowSoftInputMode="stateAlwaysHidden">
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.TAG_DISCOVERED" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
+        </activity>
         <activity
-            android:name=".Configure"
+            android:name=".activities.Configure"
             android:exported="false">
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
         <activity
-            android:name=".HomePage"
+            android:name=".activities.HomePage"
             android:exported="true">
-
 
             <!--
             <intent-filter>
@@ -107,8 +147,37 @@
                 android:value="" />
         </activity>
         <activity
-            android:name=".MainActivity"
+            android:name=".activities.MainActivity"
             android:exported="true">
+
+            <!--
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            -->
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.TAG_DISCOVERED" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />

@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical">
     <androidx.appcompat.widget.AppCompatImageView
         android:layout_width="40dp"
@@ -18,21 +19,34 @@
         android:textSize="25sp"
         android:textColor="#505050"
         android:layout_marginTop="10dp"/>
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/nfcanimation"
+        android:layout_width="250dp"
+        android:layout_height="250dp"
+        android:layout_gravity="center"
+        app:lottie_rawRes="@raw/nfc"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"/>
+
     <ImageView
         android:id="@+id/access_image"
         android:layout_width="250dp"
         android:layout_height="250dp"
         android:src="@drawable/scan1"
         android:layout_gravity="center"
-        android:padding="40dp"/>
+        android:padding="40dp"
+        android:visibility="gone"/>
     <TextView
+        android:id="@+id/nfc_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Please bring your access \n
-card closer to the device"
+        android:text="Please tap your access \n
+card to the back of device"
         android:textAlignment="center"
         android:layout_gravity="center"
         android:fontFamily="@font/sfprodisplaymedium"
-        android:layout_marginBottom="50dp"/>
+        android:layout_marginBottom="50dp"
+        />
 
 </LinearLayout>

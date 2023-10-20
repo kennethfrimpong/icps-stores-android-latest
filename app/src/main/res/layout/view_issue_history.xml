@@ -155,15 +155,20 @@
 
                 <TextView
                     android:id="@+id/receiver_name"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="2dp"
                     android:layout_marginStart="120dp"
                     android:fontFamily="@font/sfprodisplaybold"
                     android:text="First Last"
                     android:textColor="#49454f"
                     android:textSize="14sp"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent" />
+                    app:layout_constraintStart_toStartOf="parent"
+                    android:ellipsize="marquee"
+                    android:marqueeRepeatLimit="marquee_forever"
+                    android:scrollHorizontally="true"
+                    android:singleLine="true"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -191,7 +196,8 @@
 
                 <TextView
                     android:id="@+id/receiver_department"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_marginEnd="2dp"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="1dp"
                     android:fontFamily="@font/sfprodisplaybold"
@@ -200,7 +206,11 @@
                     android:textColor="#49454f"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    android:layout_marginStart="120dp"/>
+                    android:layout_marginStart="120dp"
+                    android:ellipsize="marquee"
+                    android:marqueeRepeatLimit="marquee_forever"
+                    android:scrollHorizontally="true"
+                    android:singleLine="true"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 

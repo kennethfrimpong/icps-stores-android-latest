@@ -13,14 +13,20 @@
 
         <TextView
             android:id="@+id/move_item_name"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="60dp"
             android:text="Move X "
             android:fontFamily="@font/sfprodisplaybold"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            android:textSize="18sp"/>
+            android:textSize="18sp"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:singleLine="true"
+            android:scrollHorizontally="true"/>
 
         <ImageView
             android:id="@+id/qr_code_scanner"

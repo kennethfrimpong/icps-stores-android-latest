@@ -39,7 +39,7 @@
         app:startIconDrawable="@drawable/outline_search_24"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-        <com.icpsltd.stores.CustomEditText
+        <com.icpsltd.stores.utils.CustomEditText
             android:id="@+id/stockSearch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -148,16 +148,18 @@
 
         <TextView
             android:id="@+id/item_name"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="1dp"
+            android:layout_marginEnd="2dp"
             android:fontFamily="@font/sfprodisplaybold"
-            android:text="MPR MILLING BIT"
+            android:text=""
             android:textSize="20sp"
             android:textColor="#49454f"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="170dp"/>
+            android:layout_marginStart="170dp"
+            android:breakStrategy="high_quality"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -288,7 +290,7 @@
         app:startIconDrawable="@drawable/baseline_123_24"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-        <com.icpsltd.stores.CustomEditText
+        <com.icpsltd.stores.utils.CustomEditText
 
             android:id="@+id/issue_quantity"
             android:layout_width="match_parent"

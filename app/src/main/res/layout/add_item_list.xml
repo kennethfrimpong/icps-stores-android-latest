@@ -40,17 +40,26 @@
                 android:textSize="12sp"
                 android:textColor="#49454f"
                 android:layout_marginTop="3dp"/>
+
             <TextView
                 android:id="@+id/product_name"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Product Name"
                 android:fontFamily="@font/sfprodisplaybold"
-                app:layout_constraintStart_toEndOf="@id/shipping_box"
+                android:ellipsize="marquee"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:scrollHorizontally="true"
+                android:singleLine="true"
+                android:text="Product Name"
+                android:textColor="@color/black"
+                android:textSize="12sp"
+                android:textAlignment="viewStart"
+                android:layout_marginStart="66dp"
+                android:layout_marginEnd="20dp"
                 app:layout_constraintBottom_toTopOf="@id/product_quantity"
-                app:layout_constraintTop_toBottomOf="@id/store_location"
-                android:textSize="14sp"
-                android:textColor="@color/black"/>
+                app:layout_constraintStart_toEndOf="@id/shipping_box"
+                app:layout_constraintTop_toBottomOf="@id/store_location" />
+
             <TextView
                 android:id="@+id/product_quantity"
                 android:layout_width="wrap_content"
@@ -66,17 +75,18 @@
 
             <TextView
                 android:id="@+id/product_location"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:text="Location"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginTop="3dp"
                 android:layout_marginEnd="20dp"
                 android:layout_marginBottom="10dp"
                 android:fontFamily="@font/sfprodisplaymedium"
                 android:textColor="#49454f"
-                android:textSize="13sp"/>
+                android:textSize="12sp"
+                android:textAlignment="viewEnd" />
 
 
         </androidx.constraintlayout.widget.ConstraintLayout>

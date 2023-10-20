@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".QueryByProduct">
+    tools:context=".activities.QueryByProduct">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/camera_layout"
@@ -147,7 +147,7 @@
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="130dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
             android:layout_marginStart="20dp"
@@ -185,16 +185,18 @@
 
                     <TextView
                         android:id="@+id/product_name"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
+                        android:layout_marginEnd="2dp"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="1dp"
                         android:fontFamily="@font/sfprodisplaybold"
                         android:text=""
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:textColor="#49454f"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
-                        android:layout_marginStart="140dp"/>
+                        android:layout_marginStart="140dp"
+                        android:breakStrategy="high_quality"/>
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -227,7 +229,7 @@
                         android:layout_marginBottom="1dp"
                         android:fontFamily="@font/sfprodisplaybold"
                         android:text=""
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:textColor="#49454f"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
@@ -264,7 +266,7 @@
                         android:layout_marginBottom="1dp"
                         android:fontFamily="@font/sfprodisplaybold"
                         android:text=""
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:textColor="#49454f"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
@@ -280,7 +282,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginEnd="10dp"
-                    android:layout_marginTop="7dp">
+                    android:layout_marginTop="7dp"
+                    android:layout_marginBottom="7dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -301,7 +304,7 @@
                         android:layout_marginBottom="1dp"
                         android:fontFamily="@font/sfprodisplaybold"
                         android:text=""
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:textColor="#49454f"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"

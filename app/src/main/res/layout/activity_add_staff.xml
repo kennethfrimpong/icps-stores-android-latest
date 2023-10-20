@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".activities.ReceiptPage">
+    tools:context=".activities.AddStaff">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/top_layout"
@@ -29,22 +29,22 @@
         <ImageView
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:src="@drawable/ic_outline_account_circle_24"
+            android:src="@drawable/outline_settings_24"
             android:layout_gravity="center"
             android:layout_marginTop="10dp"
             android:layout_marginEnd="20dp"
             android:contentDescription="Account Icon"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:onClick="goToConfigure"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView
-        android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Create New Issue"
+        android:text="Register Staff Access"
         android:fontFamily="@font/sfprodisplaybold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
@@ -64,24 +64,77 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Receipt"
+        android:text="Search Staff"
         android:fontFamily="@font/sfprodisplaybold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
         android:layout_marginStart="20dp"/>
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="20dp"
+        android:hint="Name"
+        android:orientation="horizontal"
+        app:boxBackgroundColor="@color/white"
+        app:boxStrokeColor="@color/black"
+        app:placeholderTextColor="@color/black"
+        app:startIconDrawable="@drawable/ic_baseline_abc_24"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/staff_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="15dp"
+            android:paddingBottom="15dp"
+            android:fontFamily="@font/sfprodisplaymedium"
+            android:inputType="text"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/staffFetchProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="21dp"
+        android:layout_marginEnd="21dp"
+        android:layout_marginTop="5dp"
+        android:indeterminate="true"
+        app:indeterminateAnimationType="disjoint"
+        android:visibility="gone"/>
+
+    <TextView
+        android:id="@+id/remove"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Remove"
+        android:fontFamily="@font/sfprodisplaymedium"
+        android:layout_gravity="end"
+        android:textColor="@color/icps_red"
+        android:layout_marginEnd="20dp"
+        android:paddingTop="3dp"
+        android:clickable="true"
+        android:visibility="gone"/>
+
+
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="150dp"
-        android:layout_marginTop="10dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
         android:layout_marginBottom="10dp"
         android:layout_marginStart="20dp"
         android:layout_marginEnd="20dp"
         app:cardBackgroundColor="#f9f9f9"
         app:cardCornerRadius="10dp"
         app:cardElevation="0dp">
-        
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -103,24 +156,95 @@
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
                     android:fontFamily="@font/sfprodisplaymedium"
-                    android:text="Transaction ID:"
-                    android:textSize="16sp"
+                    android:text="Department:"
+                    android:textSize="14sp"
                     android:textColor="#49454f"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintStart_toStartOf="parent" />
 
                 <TextView
-                    android:id="@+id/transaction_id"
+                    android:id="@+id/department"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="1dp"
+                    android:layout_marginStart="120dp"
                     android:fontFamily="@font/sfprodisplaybold"
-                    android:text="#20001"
-                    android:textSize="16sp"
+                    android:text=""
                     android:textColor="#49454f"
+                    android:textSize="14sp"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    android:layout_marginStart="140dp"/>
+                    app:layout_constraintStart_toStartOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:animateLayoutChanges="true"
+                android:id="@+id/time_box"
+                android:visibility="visible"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginTop="7dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginLeft="10dp"
+                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:text="Role :"
+                    android:textSize="14sp"
+                    android:textColor="#49454f"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <TextView
+                    android:id="@+id/transaction_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="120dp"
+                    android:fontFamily="@font/sfprodisplaybold"
+                    android:text=""
+                    android:textColor="#49454f"
+                    android:textSize="14sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:animateLayoutChanges="true"
+                android:id="@+id/issuer_box"
+                android:visibility="visible"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginTop="7dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginLeft="10dp"
+                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:text="Added By:"
+                    android:textSize="14sp"
+                    android:textColor="#49454f"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <TextView
+                    android:id="@+id/issuer_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="120dp"
+                    android:fontFamily="@font/sfprodisplaybold"
+                    android:text=""
+                    android:textColor="#49454f"
+                    android:textSize="14sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -135,36 +259,35 @@
                 android:layout_marginTop="7dp">
 
                 <TextView
-                    android:id="@+id/staffName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
+                    android:layout_marginLeft="10dp"
                     android:fontFamily="@font/sfprodisplaymedium"
-                    android:text="Issuer Name:"
+                    android:text="Date Added:"
+                    android:textSize="14sp"
                     android:textColor="#49454f"
-                    android:textSize="16sp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
 
                 <TextView
-                    android:id="@+id/issuer_name"
+                    android:id="@+id/book_number"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="1dp"
                     android:fontFamily="@font/sfprodisplaybold"
-                    android:text="First Last"
-                    android:textSize="16sp"
+                    android:text=""
+                    android:textSize="14sp"
                     android:textColor="#49454f"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    android:layout_marginStart="140dp"/>
+                    android:layout_marginStart="120dp"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:animateLayoutChanges="true"
-                android:id="@+id/store_box"
+                android:id="@+id/receiver_box"
                 android:visibility="visible"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -173,14 +296,13 @@
                 android:layout_marginTop="7dp">
 
                 <TextView
-                    android:id="@+id/returnerName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
                     android:fontFamily="@font/sfprodisplaymedium"
-                    android:text="Receiver Name:"
-                    android:textSize="16sp"
+                    android:text="Time Added:"
+                    android:textSize="14sp"
                     android:textColor="#49454f"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintStart_toStartOf="parent" />
@@ -189,110 +311,66 @@
                     android:id="@+id/receiver_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="1dp"
+                    android:layout_marginStart="120dp"
                     android:fontFamily="@font/sfprodisplaybold"
-                    android:text="First Last"
-                    android:textSize="16sp"
+                    android:text=""
                     android:textColor="#49454f"
+                    android:textSize="14sp"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    android:layout_marginStart="140dp"/>
+                    app:layout_constraintStart_toStartOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:animateLayoutChanges="true"
-                android:id="@+id/quantity_box"
+                android:id="@+id/department_box"
                 android:visibility="visible"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_marginEnd="10dp"
-                android:layout_marginTop="7dp">
+                android:layout_marginTop="7dp"
+                android:layout_marginBottom="20dp">
 
                 <TextView
-                    android:id="@+id/returnerDepartment"
+                    android:id="@+id/access_status_txt"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
                     android:fontFamily="@font/sfprodisplaymedium"
-                    android:text="Receiver Dept:"
-                    android:textSize="16sp"
+                    android:text="Access ID Status:"
+                    android:textSize="14sp"
                     android:textColor="#49454f"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintStart_toStartOf="parent" />
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
 
                 <TextView
-                    android:id="@+id/receiver_department"
+                    android:id="@+id/access_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="1dp"
                     android:fontFamily="@font/sfprodisplaybold"
-                    android:text="M &amp; E"
-                    android:textSize="16sp"
-                    android:textColor="#49454f"
+                    android:text="NOT ENROLLED"
+                    android:textSize="14sp"
+                    android:textColor="@color/icps_red"
+                    android:layout_marginStart="20dp"
+                    app:layout_constraintStart_toEndOf="@id/access_status_txt"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    android:layout_marginStart="140dp"/>
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+
 
             </androidx.constraintlayout.widget.ConstraintLayout>
-            
-            
-            
-            
+
+
+
+
+
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
 
-
-    <TextView
-        android:id="@+id/itemsReturned"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Items Issued"
-        android:fontFamily="@font/sfprodisplaybold"
-        android:textSize="25sp"
-        android:textColor="#3f3f3f"
-        android:layout_marginTop="10dp"
-        android:layout_marginStart="20dp"/>
-
-
-
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/no_items_cardview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="10dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="20dp"
-        android:layout_weight="1"
-        app:cardBackgroundColor="#f9f9f9"
-        app:cardCornerRadius="10dp"
-        app:cardElevation="0dp">
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <ListView
-                android:id="@+id/ongoing_item_list"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                android:divider="@null"/>
-
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/create_issue"
@@ -301,15 +379,15 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        app:icon="@drawable/baseline_check_24"
+        app:icon="@drawable/ic_outline_perm_contact_calendar_24"
         app:iconSize="20dp"
-        android:text="Done"
+        android:text="Capture Access"
         android:textAllCaps="false"
         android:fontFamily="@font/sfprodisplaymedium"
         app:cornerRadius="20sp"
-        android:onClick="goHome"
+        android:onClick="captureAccess"
         android:layout_marginTop="5dp"
-        android:layout_marginBottom="5dp"/>
+        android:layout_marginBottom="5dp" />
 
 
 </LinearLayout>

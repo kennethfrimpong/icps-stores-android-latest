@@ -20,20 +20,24 @@
         android:textSize="18sp"
         android:textColor="#505050"
         android:layout_marginTop="20dp"/>
-    <ImageView
-        android:id="@+id/access_image"
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/nfcanimation"
         android:layout_width="250dp"
         android:layout_height="250dp"
-        android:src="@drawable/scan1"
         android:layout_gravity="center"
-        android:padding="20dp"/>
+        app:lottie_rawRes="@raw/nfc"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"
+        android:layout_marginBottom="70dp"/>
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="OR"
         android:textAlignment="center"
         android:layout_gravity="center"
-        android:fontFamily="@font/sfprodisplaymedium" />
+        android:fontFamily="@font/sfprodisplaymedium"
+        android:visibility="gone"/>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="350dp"
@@ -45,7 +49,8 @@
         app:boxStrokeColor="@color/black"
         app:placeholderTextColor="@color/black"
         app:startIconDrawable="@drawable/ic_baseline_password_24"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:visibility="gone">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/pin_input"
@@ -55,7 +60,8 @@
             android:inputType="number"
             android:maxLength="4"
             android:textColor="@color/black"
-            android:textColorHint="@color/black"/>
+            android:textColorHint="@color/black"
+            />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -83,7 +89,8 @@
         android:fontFamily="@font/sfprodisplaymedium"
         app:cornerRadius="20sp"
         android:onClick="create_issue"
-        android:layout_marginTop="20dp" />
+        android:layout_marginTop="20dp"
+        android:visibility="gone"/>
 
 
 
