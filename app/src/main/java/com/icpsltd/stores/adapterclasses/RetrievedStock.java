@@ -5,13 +5,17 @@ public class RetrievedStock {
     private String description;
 
     private String id;
-    private Integer quantity;
+    private Float quantity;
     private String location;
     private String store;
 
     private String unit;
 
-    public RetrievedStock(String itemCode, String product_name, String product_description, Integer product_quantity, String product_location, String product_store, String unit){
+    private String additionID;
+
+    private String imageAvailable;
+
+    public RetrievedStock(String itemCode, String product_name, String product_description, Float product_quantity, String product_location, String product_store, String unit, String AdditionID, String imageAvailable){
         this.name = product_name;
         this.description = product_description;
         this.quantity = product_quantity;
@@ -19,6 +23,16 @@ public class RetrievedStock {
         this.store = product_store;
         this.id = itemCode;
         this.unit = unit;
+        this.additionID = AdditionID;
+        this.imageAvailable = imageAvailable;
+    }
+
+    public String getImageAvailable(){
+        return this.imageAvailable;
+    }
+
+    public String getAdditionID(){
+        return this.additionID;
     }
 
     public String getName() {
@@ -32,7 +46,7 @@ public class RetrievedStock {
 
 
 
-    public Integer getQuantity() {
+    public Float getQuantity() {
         return quantity;
     }
 

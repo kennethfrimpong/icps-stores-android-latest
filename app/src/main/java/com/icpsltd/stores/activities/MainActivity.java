@@ -7,7 +7,9 @@ import static com.credenceid.biometrics.Biometrics.ResultCode.OK;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.PendingIntent;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.nfc.NfcAdapter;
@@ -20,6 +22,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -64,6 +67,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
+import okhttp3.Headers;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -91,6 +95,9 @@ public class MainActivity extends AppCompatActivity {
     BottomSheetDialog bottomSheetDialog;
 
     private static Biometrics.OnCardStatusListener onCardStatusListener;
+    private boolean mIsCardReaderOpen = false;
+
+
 
 
 
@@ -100,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         fetchCredentials();
         responseString = null;
+        mIsCardReaderOpen = false;
         /*
 
         pendingIntent = PendingIntent.getActivity(
@@ -119,6 +127,9 @@ public class MainActivity extends AppCompatActivity {
         linearProgressIndicator = findViewById(R.id.login_progress);
 
 
+        Log.d("STAGE", "OnCreate");
+
+
     }
 
     public void configureHttpConnectionWithSSL(){
@@ -126,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
             DBHandler dbHandler = new DBHandler(getApplicationContext());
             apiHost = dbHandler.getApiHost();
             apiPort = dbHandler.getApiPort();
+            dbHandler.close();
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -179,6 +191,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void showBottomSheet(){
+        mIsCardReaderOpen = true;
         int layout = R.layout.login_with_access_sheet;
         View bottomSheetView = LayoutInflater.from(this).inflate(layout, null);
 
@@ -200,18 +213,39 @@ public class MainActivity extends AppCompatActivity {
          */
 
         try{
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    bottomSheetDialog.show();
+                }
+            });
+
             new MainActivity.OpenCardReaderAsync().execute();
         } catch (Exception e){
             e.printStackTrace();
         }
 
+        bottomSheetDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                App.BioManager.cardCloseCommand();
+                App.BioManager.cardDisconnectSync(1);
+                mIsCardReaderOpen = false;
+            }
+        });
+
+    }
+
+    public void displayResetHelper(View view) {
+        Toast.makeText(this, "          Reset your password on web at\nhttps://stores.app.icps/reset-account.html", Toast.LENGTH_LONG).show();
     }
 
     private class CardReading extends AsyncTask<Object, Boolean, Boolean> {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            Functions.Show_loader(MainActivity.this, false, false);
+            //bottomSheetDialog.show();
+            //Functions.Show_loader(MainActivity.this, false, false);
         }
 
         @Override
@@ -253,7 +287,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute() {
-            Functions.cancel_loader();
+            //Functions.cancel_loader();
+            //bottomSheetDialog.dismiss();
 
         }
 
@@ -265,38 +300,42 @@ public class MainActivity extends AppCompatActivity {
                 //Toast.makeText(this, "sw1="+sw1, Toast.LENGTH_SHORT).show();
                 //Toast.makeText(this, "sw1="+sw2, Toast.LENGTH_SHORT).show();
                 //Toast.makeText(this, "data="+ Arrays.toString(data), Toast.LENGTH_SHORT).show();
-                Toast.makeText(this, "HexString="+bytesToHexString(data), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "HexString="+bytesToHexString(data), Toast.LENGTH_SHORT).show();
                 BigInteger uidInt = new BigInteger(bytesToHexString(data), 16);
-                Toast.makeText(this, "Integer Value: "+String.valueOf(uidInt), Toast.LENGTH_LONG).show();
+                //Toast.makeText(this, "Integer Value: "+String.valueOf(uidInt), Toast.LENGTH_LONG).show();
                 verifyAccessCard(uidInt);
             } else if (INTERMEDIATE == resultcode) {
                 Toast.makeText(this, "INTERMEDIATE", Toast.LENGTH_SHORT).show();
             } else if (FAIL == resultcode) {
-                Toast.makeText(this, "FAILED", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "FAILED.. \n Did you hold card on reader?", Toast.LENGTH_SHORT).show();
             }
 
         });
     }
-
-
 
     private class OpenCardReaderAsync extends AsyncTask<Object, Boolean, Boolean> {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
 
-            Functions.Show_loader(MainActivity.this, false, true);
+            //Functions.Show_loader(MainActivity.this, false, true);
 //            Functions.fetchAndSaveUsers(LoginActivity.this);
         }
 
         @Override
         protected Boolean doInBackground(Object... objects) {
-            openCardReader();
+            if(mIsCardReaderOpen == true){
+                openCardReader();
+            }
+
             return true;
         }
 
         protected void onPostExecute() {
-            Functions.cancel_loader();
+            bottomSheetDialog.dismiss();
+            //App.BioManager.cardCloseCommand();
+            //App.BioManager.cardDisconnectSync(1);
+            //Functions.cancel_loader();
             //Functions.arrangeFingers(finger_1,finger_2,finger_3,finger_4,cardDetails.getGhanaIdCardFpTemplateInfosList());
 
         }
@@ -309,17 +348,17 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCardReaderOpen(Biometrics.ResultCode resultCode) {
                 if (resultCode == Biometrics.ResultCode.OK) {
-
+                    //mIsCardReaderOpen = true;
                     onCardStatusListener = new Biometrics.OnCardStatusListener() {
                         @Override
                         public void onCardStatusChange(String s, int prevState, int currentState) {
                             if (Variables.CARD_ABSENT == currentState) {
-                                Functions.Show_Alert2(MainActivity.this, "CARD ABSENT", "Place Card on top on the device");
+                                //Functions.Show_Alert2(MainActivity.this, "CARD ABSENT", "Place Card on top on the device");
                             } else {
                                 Variables.mIsDocPresentOnEPassport = true;
-                                Functions.hide_Alert2();
+                                //Functions.hide_Alert2();
 
-                                Toast.makeText(MainActivity.this, "CARD DETECTED", Toast.LENGTH_SHORT).show();
+                                //Toast.makeText(MainActivity.this, "CARD DETECTED", Toast.LENGTH_SHORT).show();
                                 new MainActivity.CardReading().execute();
 
                             }
@@ -389,6 +428,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             String apiHost = dbHandler.getApiHost();
             String apiPort = dbHandler.getApiPort();
+            dbHandler.close();
 
             if (apiPort == null || apiPort.equals("") || apiHost == null || apiHost.equals("")) {
                 //textViewName.setText("Connection failed, check API configuration");
@@ -412,18 +452,13 @@ public class MainActivity extends AppCompatActivity {
                     Log.i("Response",status);
 
                     if(status.equals("verified")){
-
+                        Headers headers = response.headers();
+                        String jwt_token = headers.get("Set-Cookie");
+                        jwt_token = jwt_token.substring(10,jwt_token.indexOf(";"));
+                        //Log.d("Token",jwt_token);
+                        myPrefs.saveToken(getApplicationContext(),jwt_token);
                         runOnUiThread(() -> {
                             Toast.makeText(this, "Authenticated Successfully", Toast.LENGTH_SHORT).show();
-
-                            //TextView textViewName = findViewById(R.id.login_status);
-                            //textViewName.setVisibility(View.VISIBLE);
-                            //textViewName.setText("Connecting to database...");
-                            //textViewName.setTextColor(Color.parseColor("#FFC107"));
-
-
-                            //String email = jsonObject.optString("email");
-                            //String accessID = jsonObject.optString("accessID");
 
                             String firstName = jsonObject.optString("firstName");
                             String lastName = jsonObject.optString("lastName");
@@ -435,37 +470,75 @@ public class MainActivity extends AppCompatActivity {
                             TextView textViewName1 = findViewById(R.id.login_status);
 
                             dbHandler1.addUserSession(userID,firstName,lastName,privilege,1,"accessID");
+                            dbHandler1.close();
                             myPref.saveLoginStatus(getApplicationContext(),true);
                             textViewName1.setVisibility(View.VISIBLE);
                             textViewName1.setText("Connected to database");
                             textViewName1.setTextColor(Color.parseColor("#56AF54"));
                             Intent intent = new Intent(MainActivity.this, HomePage.class);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                            bottomSheetDialog.dismiss();
+                            mIsCardReaderOpen = false;
                             startActivity(intent);
+                            finish();
+
                         });
-
-
-
 
                         return status;
                     } else if (status.equals("Account not found")) {
                         runOnUiThread(()->{
-                            //textViewName.setVisibility(View.VISIBLE);
-                            //textViewName.setText("Account not found");
-                            //textViewName.setTextColor(Color.parseColor("#E30613"));
+                            TextView textViewName = findViewById(R.id.login_status);
+                            textViewName.setVisibility(View.VISIBLE);
+                            textViewName.setText("Account not found");
+                            textViewName.setTextColor(Color.parseColor("#E30613"));
                             Toast.makeText(this, "Account not found", Toast.LENGTH_SHORT).show();
-                            bottomSheetDialog.dismiss();
-                            linearProgressIndicator = findViewById(R.id.login_progress);
-                            linearProgressIndicator.setVisibility(View.GONE);
+                            try{
+                                mIsCardReaderOpen = false;
+
+                                bottomSheetDialog.dismiss();
+                                linearProgressIndicator = findViewById(R.id.login_progress);
+                                linearProgressIndicator.setVisibility(View.GONE);
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
+
+                        });
+
+                        return status;
+                    } else if (status.equals("otpActive")) {
+                        runOnUiThread(()->{
+                            TextView textViewName = findViewById(R.id.login_status);
+                            textViewName.setVisibility(View.VISIBLE);
+                            textViewName.setText(jsonObject.optString("message"));
+                            textViewName.setTextColor(Color.parseColor("#E30613"));
+                            Toast.makeText(this, jsonObject.optString("message"), Toast.LENGTH_SHORT).show();
+                            try{
+                                mIsCardReaderOpen = false;
+
+                                bottomSheetDialog.dismiss();
+                                linearProgressIndicator = findViewById(R.id.login_progress);
+                                linearProgressIndicator.setVisibility(View.GONE);
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
+
                         });
 
                         return status;
                     } else if (status.equals("-1")) {
                         runOnUiThread(()->{
-                            //textViewName.setVisibility(View.VISIBLE);
-                            //textViewName.setText("Could not establish database connection");
-                            //textViewName.setTextColor(Color.parseColor("#E30613"));
+                            TextView textViewName = findViewById(R.id.login_status);
+                            mIsCardReaderOpen = false;
+                            textViewName.setVisibility(View.VISIBLE);
+                            textViewName.setText("Could not establish database connection");
+                            textViewName.setTextColor(Color.parseColor("#E30613"));
                             Toast.makeText(this, "There was an error", Toast.LENGTH_SHORT).show();
-                            bottomSheetDialog.dismiss();
+                            try{
+                                bottomSheetDialog.dismiss();
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
+
                             linearProgressIndicator = findViewById(R.id.login_progress);
                             linearProgressIndicator.setVisibility(View.GONE);
                         });
@@ -478,9 +551,12 @@ public class MainActivity extends AppCompatActivity {
                 } catch (Exception e){
                     e.printStackTrace();
                     runOnUiThread(()->{
-                        //textViewName.setVisibility(View.VISIBLE);
-                        //textViewName.setText("Could not establish server connection");
-                        //textViewName.setTextColor(Color.parseColor("#E30613"));
+                        TextView textViewName = findViewById(R.id.login_status);
+                        textViewName.setVisibility(View.VISIBLE);
+                        textViewName.setText("Could not establish server connection \n Check wifi connection or API configuration");
+                        textViewName.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+                        textViewName.setTextColor(Color.parseColor("#E30613"));
+                        Toast.makeText(this, "   Could not establish server connection \n Check wifi connection or API configuration", Toast.LENGTH_SHORT).show();
 
                         myPrefs.saveLoginStatus(getApplicationContext(),false);
                         LinearProgressIndicator linearProgressIndicator = findViewById(R.id.login_progress);
@@ -501,6 +577,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void access_login(View view) {
+
         showBottomSheet();
     }
 
@@ -514,8 +591,6 @@ public class MainActivity extends AppCompatActivity {
         TextView tv = findViewById(R.id.login_status);
         tv.setText("");
         tv.setVisibility(View.GONE);
-
-
 
         EditText email_input = findViewById(R.id.email_input);
         email_to_check = email_input.getText().toString();
@@ -531,6 +606,7 @@ public class MainActivity extends AppCompatActivity {
             DBHandler dbHandler = new DBHandler(getApplicationContext());
             String apiHost = dbHandler.getApiHost();
             String apiPort = dbHandler.getApiPort();
+            dbHandler.close();
 
             if(apiPort == null || apiPort.equals("") || apiHost == null || apiHost.equals("") ){
                 textViewName.setText("Connection failed, check API configuration");
@@ -553,10 +629,26 @@ public class MainActivity extends AppCompatActivity {
                         response = okHttpClient.newCall(request).execute();
                         String resString = response.body().string();
                         JSONObject jsonObject = new JSONObject(resString);
+                        Log.d("Response",resString);
+                        Log.d("Response",jsonObject.toString());
                         String status = jsonObject.optString("status");
                         Log.i("Response",status);
 
                         if(status.equals("verified")){
+                            //String jwt_token = response.header("Authorization");
+                            //assert jwt_token != null;
+                            //Log.d("Response",jwt_token);
+                            //log all response headers
+                            Headers headers = response.headers();
+                            String jwt_token = headers.get("Set-Cookie");
+                            jwt_token = jwt_token.substring(10,jwt_token.indexOf(";"));
+                            //Log.d("Token",jwt_token);
+
+                            myPrefs.saveToken(getApplicationContext(),jwt_token);
+                            //Log.d("Token"," Saved");
+
+                            //String token = myPrefs.getToken(getApplicationContext());
+                            //Log.d("Token Retrieved ",token);
 
                             runOnUiThread(() -> {
                                 Toast.makeText(this, "Authenticated Successfully", Toast.LENGTH_SHORT).show();
@@ -578,12 +670,14 @@ public class MainActivity extends AppCompatActivity {
                                 TextView textViewName1 = findViewById(R.id.login_status);
 
                                 dbHandler1.addUserSession(userID,firstName,lastName,privilege,1,"accessID");
+                                dbHandler1.close();
                                 myPref.saveLoginStatus(getApplicationContext(),true);
                                 textViewName1.setVisibility(View.VISIBLE);
                                 textViewName1.setText("Connected to database");
                                 textViewName1.setTextColor(Color.parseColor("#56AF54"));
                                 Intent intent = new Intent(MainActivity.this, HomePage.class);
                                 startActivity(intent);
+                                finish();
                             });
 
 
@@ -594,6 +688,17 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(()->{
                                 textViewName.setVisibility(View.VISIBLE);
                                 textViewName.setText("Incorrect Password");
+                                textViewName.setTextColor(Color.parseColor("#E30613"));
+                                myPrefs.saveLoginStatus(getApplicationContext(),false);
+                                LinearProgressIndicator linearProgressIndicator = findViewById(R.id.login_progress);
+                                linearProgressIndicator.setVisibility(View.GONE);
+                            });
+
+                            return status;
+                        } else if (status.equals("locked") || status.equals("otpActive")) {
+                            runOnUiThread(()->{
+                                textViewName.setVisibility(View.VISIBLE);
+                                textViewName.setText(jsonObject.optString("message"));
                                 textViewName.setTextColor(Color.parseColor("#E30613"));
                                 myPrefs.saveLoginStatus(getApplicationContext(),false);
                                 LinearProgressIndicator linearProgressIndicator = findViewById(R.id.login_progress);
@@ -641,6 +746,8 @@ public class MainActivity extends AppCompatActivity {
                     return null;
                 });
 
+                /*
+
                 try {
                     String result = futureResult.get();
                     //runOnUiThread(() -> Toast.makeText(this, result, Toast.LENGTH_SHORT).show());
@@ -659,6 +766,8 @@ public class MainActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+
+                 */
 
 
             } else if (email_to_check.equals("")&&password_to_check != null) {
@@ -696,11 +805,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e){
             e.printStackTrace();
         }
-
-
-
-
-
 
         /*
 
@@ -786,7 +890,7 @@ public class MainActivity extends AppCompatActivity {
 
      */
 
-
+/*
     @Override
     protected void onStart() {
         super.onStart();
@@ -795,19 +899,28 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, HomePage.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
+            finish();
         }
         configureHttpConnectionWithSSL();
+
+        Log.d("STAGE", "OnStart");
     }
+
+ */
 
     @Override
     protected void onResume() {
         super.onResume();
+        mIsCardReaderOpen = false;
+        configureHttpConnectionWithSSL();
         MyPrefs myPrefs = new MyPrefs();
         if (myPrefs.getLoginStatus(getApplicationContext())){
             Intent intent = new Intent(MainActivity.this, HomePage.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
+            finish();
         }
+        Log.d("STAGE", "OnResume");
 
         //NfcAdapter nfcAdapter =  NfcAdapter.getDefaultAdapter(this);
         //nfcAdapter.enableForegroundDispatch(this, pendingIntent, null, null);
@@ -829,10 +942,12 @@ public class MainActivity extends AppCompatActivity {
         protected Request doInBackground(Void... voids) {
 
             try{
+                MyPrefs myPrefs = new MyPrefs();
                 String json = "{\"email\":\""+email_to_check+"\",\"password\":\""+password_to_check+"\"}";
                 RequestBody requestBody =  RequestBody.create(json, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+apiHost+":"+apiPort+"/api/v1/login/")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody)
                         .build();
                 response = okHttpClient.newCall(request).execute();
@@ -895,28 +1010,10 @@ public class MainActivity extends AppCompatActivity {
                             mifareClassic.connect();
                             byte[] uid = mifareClassic.getTag().getId();
                             String uidString = bytesToHexString(uid);
-
-                            //textView.setText("Serial: "+uidString);
-
                             String[] techList = mifareClassic.getTag().getTechList();
                             String techListString = Arrays.toString(techList);
-
-                            //textView2.setText("Technologies: "+techListString);
-
-                            //Log.i("MIFARE", uidString);
-
-                            //cardType = "Mifare Classic";
-
-
-                            //int uidInt = Integer.parseInt(uidString, 16);
-                            //uidTV.setText("ID: "+uidInt);
-
                             BigInteger uidInt = new BigInteger(uidString, 16);
                             verifyAccessCard(uidInt);
-                            //uidTV.setText("ID: "+uidInt);
-
-                            //543311341
-
 
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -942,22 +1039,12 @@ public class MainActivity extends AppCompatActivity {
                         byte[] uid = isoDep.getTag().getId();
                         String uidString = bytesToHexString(uid);
 
-
-                        //textView.setText("Serial: "+uidString);
-
                         String[] techList = isoDep.getTag().getTechList();
                         String techListString = Arrays.toString(techList);
 
-                        //textView2.setText("Technologies: "+techListString);
-
-                        //Log.i("MIFARE", uidString);
-
-                        //cardType = "IsoDep";
-
-                        //convert bigint uid to int
                         BigInteger uidInt = new BigInteger(uidString, 16);
                         verifyAccessCard(uidInt);
-                        //uidTV.setText("ID: "+uidInt);
+
 
 
                     }
@@ -994,6 +1081,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        Log.d("STAGE", "OnPause");
         //NfcAdapter nfcAdapter =  NfcAdapter.getDefaultAdapter(this);
         //nfcAdapter.disableForegroundDispatch(this);
     }

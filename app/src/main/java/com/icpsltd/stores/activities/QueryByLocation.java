@@ -2,6 +2,7 @@ package com.icpsltd.stores.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatSpinner;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
@@ -26,7 +27,10 @@ import com.icpsltd.stores.R;
 import com.icpsltd.stores.adapterclasses.RetrievedLocation;
 import com.icpsltd.stores.adapterclasses.RetrievedStock;
 import com.icpsltd.stores.adapterclasses.RetrievedStore;
+import com.icpsltd.stores.utils.ItemLocationParser;
+import com.icpsltd.stores.utils.MyPrefs;
 import com.icpsltd.stores.utils.StockTable;
+import com.icpsltd.stores.utils.TokenChecker;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -77,44 +81,67 @@ public class QueryByLocation extends AppCompatActivity {
     private String locationIDQR;
     private String storeIDQR;
 
+    private String store;
+    private String shelf;
+    private String level;
+    private String space;
+
+    TextView scanHelperText;
+    TextView storeName;
+    TextView shelfNumber;
+    TextView levelNumber;
+    TextView spaceNumber;
+
+    ConstraintLayout locationContainer;
+
     private TextView showing_results;
 
     private OkHttpClient okHttpClient;
+
+    private MyPrefs myPrefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_query_by_location);
-        spinner = findViewById(R.id.spinner);
-        spinner2 = findViewById(R.id.spinner2);
+        //spinner = findViewById(R.id.spinner);
+        //spinner2 = findViewById(R.id.spinner2);
         listView = findViewById(R.id.location_listview);
         linearProgressIndicator = findViewById(R.id.progressBar);
         loadingBar = findViewById(R.id.fetch_progress);
         loadingText = findViewById(R.id.loading);
         showing_results = findViewById(R.id.showing_results);
 
+        locationContainer = findViewById(R.id.locationContainer);
+        scanHelperText = findViewById(R.id.scanHelperText);
+        storeName = findViewById(R.id.store_name);
+        shelfNumber = findViewById(R.id.shelf);
+        levelNumber = findViewById(R.id.level);
+        spaceNumber = findViewById(R.id.space);
+
         TextView asname = findViewById(R.id.firstLastName);
         DBHandler dbHandler = new DBHandler(getApplicationContext());
         asname.setText("as "+dbHandler.getFirstName()+" "+dbHandler.getLastName());
 
+        myPrefs = new MyPrefs();
+
 
         try {
-            locationIDQR = getIntent().getStringExtra("locationid");
-            storeIDQR = getIntent().getStringExtra("storeid");
-            if (locationIDQR != null && storeIDQR != null) {
-                selectedLocationID = locationIDQR;
-                selectedStoreID = storeIDQR;
+            store = getIntent().getStringExtra("store");
+            shelf = getIntent().getStringExtra("shelf");
+            level = getIntent().getStringExtra("level");
+            space = getIntent().getStringExtra("space");
 
-                View view = new View(getApplicationContext());
-                search(view);
-                getStoreQR();
+            if (store != null && shelf != null && level != null && space != null) {
+                search(store, shelf, level, space);
+                //getStoreQR();
 
             } else{
-                getStore();
+                //getStore();
             }
         } catch (Exception e) {
-
         }
+
 
 
         try{
@@ -489,7 +516,7 @@ public class QueryByLocation extends AppCompatActivity {
         startActivity(intent);
     }
 
-    public void search(View view) {
+    public void search(String store, String shelf, String level, String space){
         loadingBar.setVisibility(View.VISIBLE);
         loadingText.setVisibility(View.VISIBLE);
         loadingText.setText("Searching...");
@@ -507,21 +534,31 @@ public class QueryByLocation extends AppCompatActivity {
                 fetchedStockTable = new ArrayList<>();
                 DBHandler dbHandler = new DBHandler(getApplicationContext());
                 SQLiteDatabase db = dbHandler.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM stockTable",null);
+                Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, ImageAvailable FROM stockTable",null);
                 if(cursor.getCount() == 0){
                     loadingText.setVisibility(View.VISIBLE);
                     loadingText.setText("No Results Found");
                 }
+                scanHelperText.setVisibility(View.GONE);
+                locationContainer.setVisibility(View.VISIBLE);
+                storeName.setVisibility(View.VISIBLE);
+                storeName.setText(store);
+
+                shelfNumber.setText("Shelf: "+shelf);
+                levelNumber.setText("Level: "+level);
+                spaceNumber.setText("Space: "+space);
+
                 while (cursor.moveToNext()){
                     String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
                     String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-                    Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                    Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
                     String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
                     String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
                     String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
                     String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                    String imageAvailable = cursor.getString(cursor.getColumnIndexOrThrow("ImageAvailable"));
 
-                    RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit);
+                    RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit,null,imageAvailable);
                     fetchedStockTable.add(retrievedStock);
 
                 }
@@ -541,10 +578,11 @@ public class QueryByLocation extends AppCompatActivity {
                         TextView product_quantity = view.findViewById(R.id.product_quantity);
                         TextView product_location = view.findViewById(R.id.product_location);
                         RetrievedStock retrievedStock = getItem(position);
+
                         product_name.setText(retrievedStock.getName());
-                        store_location.setText(retrievedStock.getStore());
+                        store_location.setText(retrievedStock.getID());
                         product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
-                        product_location.setText(retrievedStock.getLocation());
+                        product_location.setText("");
 
 
                         return view;
@@ -591,10 +629,19 @@ public class QueryByLocation extends AppCompatActivity {
                 RequestBody requestBody =  RequestBody.create(storesql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody)
                         .build();
                 Response response = okHttpClient.newCall(request).execute();
                 String resString = response.body().string();
+
+                JSONObject jsonObject3 = new JSONObject(resString);
+
+                String status1 = jsonObject3.optString("status");
+                resString = jsonObject3.optString("data");
+
+                TokenChecker tokenChecker = new TokenChecker();
+                tokenChecker.checkToken(status1, getApplicationContext(), QueryByLocation.this);
 
                 jsonArray1 = new JSONArray(resString);
                 response.close();
@@ -603,10 +650,18 @@ public class QueryByLocation extends AppCompatActivity {
                RequestBody requestBody1 =  RequestBody.create(locationsql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                Request request1 = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                       .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody1)
                         .build();
                 Response response1 = okHttpClient.newCall(request1).execute();
                 String resString1 = response1.body().string();
+
+                JSONObject jsonObject4 = new JSONObject(resString1);
+
+                String status2 = jsonObject4.optString("status");
+                resString1 = jsonObject4.optString("data");
+
+                tokenChecker.checkToken(status2, getApplicationContext(), QueryByLocation.this);
 
                 jsonArray2 = new JSONArray(resString1);
                 response.close();
@@ -669,7 +724,8 @@ public class QueryByLocation extends AppCompatActivity {
             dbHandler1.clearStockTable();
             JSONArray jsonArray;
             try {
-                String queryType = "";
+                String queryType = "space";
+                /*
                 if(selectedLocationID.substring(1).equals("000")){
                     queryType = "allStore";
                 } else {
@@ -677,15 +733,27 @@ public class QueryByLocation extends AppCompatActivity {
 
                 }
 
-                String sql = "{\"type\":\"queryByLocation\",\"condition\":\"getStock\",\"queryType\":\""+queryType+"\",\"selectedStoreID\":\""+selectedStoreID+"\",\"selectedLocationID\":\""+selectedLocationID+"\"}";
+                 */
+
+                String sql = "{\"type\":\"queryByLocation\",\"condition\":\"getStock\",\"queryType\":\""+queryType+"\",\"store\":\""+store+"\",\"shelf\":\""+shelf+"\",\"level\":\""+level+"\",\"space\":\""+space+"\"}";
 
                 RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody)
                         .build();
                 Response response = okHttpClient.newCall(request).execute();
                 String resString = response.body().string();
+
+                JSONObject jsonObject4 = new JSONObject(resString);
+
+                String status2 = jsonObject4.optString("status");
+                resString = jsonObject4.optString("data");
+
+                TokenChecker tokenChecker = new TokenChecker();
+
+                tokenChecker.checkToken(status2, getApplicationContext(), QueryByLocation.this);
 
                 jsonArray = new JSONArray(resString);
                 response.close();
@@ -698,8 +766,15 @@ public class QueryByLocation extends AppCompatActivity {
                     String productStore = jsonObject.optString("productStore");
                     String productLocation = jsonObject.optString("productLocation");
                     String productUnit = jsonObject.optString("productUnit");
-                    int productQuantity = jsonObject.optInt("productQuantity");
-                    dbHandler1.syncStockTable(itemCode,productName,productDesc,productQuantity,productStore,productLocation,productUnit);
+                    double productQuantity = jsonObject.optDouble("productQuantity");
+                    String imageAvailable = jsonObject.optString("imageAvailable");
+
+                    ItemLocationParser itemLocationParser = new ItemLocationParser();
+                    String[] parsedLocation = itemLocationParser.parseLocation(productLocation);
+                    productStore = parsedLocation[0];
+                    productLocation = parsedLocation[1];
+
+                    dbHandler1.syncStockTable(itemCode,productName,productDesc,(float)productQuantity,productStore,productLocation,productUnit,imageAvailable);
                 }
 
             } catch (Exception e) {

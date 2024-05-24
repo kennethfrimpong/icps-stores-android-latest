@@ -37,6 +37,8 @@ import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
 import com.icpsltd.stores.R;
 import com.icpsltd.stores.utils.DBHandler;
+import com.icpsltd.stores.utils.MyPrefs;
+import com.icpsltd.stores.utils.TokenChecker;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -100,6 +102,13 @@ public class ScanQR extends AppCompatActivity {
     private String toStoreName;
     private String toStoreID;
 
+    private String fromShelf;
+    private String fromLevel;
+    private String fromSpace;
+    private String fromStore;
+
+    private String address;
+
     private String fromLocationID;
     private String fromLocationName;
     private String fromStoreName;
@@ -113,6 +122,8 @@ public class ScanQR extends AppCompatActivity {
 
     private String apiHost;
     private String apiPort;
+
+    AlertDialog alertDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,10 +150,10 @@ public class ScanQR extends AppCompatActivity {
 
         try{
             func = getIntent().getStringExtra("function");
-            fromLocationName = getIntent().getStringExtra("fromLocationName");
-            fromLocationID = getIntent().getStringExtra("fromLocationID");
-            fromStoreID = getIntent().getStringExtra("fromStoreID");
-            fromStoreName = getIntent().getStringExtra("fromStoreName");
+            fromShelf = getIntent().getStringExtra("fromShelf");
+            fromStore = getIntent().getStringExtra("fromStore");
+            fromLevel = getIntent().getStringExtra("fromLevel");
+            fromSpace = getIntent().getStringExtra("fromSpace");
             itemCode = getIntent().getStringExtra("itemCode");
             productName = getIntent().getStringExtra("productName");
 
@@ -397,9 +408,11 @@ public class ScanQR extends AppCompatActivity {
                             String locationid = null;
                             String storeid = null;
                             String item_code = null;
+                            MyPrefs myPrefs = new MyPrefs();
 
                             try {
                                 json = new JSONObject(rawValue);
+
                                 if(json.optString("projectid").equals("9015")){
 
                                     ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -408,10 +421,20 @@ public class ScanQR extends AppCompatActivity {
                                         try{
                                             Request request = new Request.Builder()
                                                     .url("https://"+apiHost+":"+apiPort+"/api/v1/tst/getDateTime")
+                                                    .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                                                     //.post(requestBody)
                                                     .build();
                                             Response response = okHttpClient.newCall(request).execute();
                                             String resString = response.body().string();
+
+                                            JSONObject jsonObject3 = new JSONObject(resString);
+
+                                            String status1 = jsonObject3.optString("status");
+                                            resString = jsonObject3.optString("data");
+
+                                            TokenChecker tokenChecker = new TokenChecker();
+                                            tokenChecker.checkToken(status1, getApplicationContext(), ScanQR.this);
+
                                             Log.i("Response",resString);
 
                                             response.close();
@@ -441,15 +464,35 @@ public class ScanQR extends AppCompatActivity {
                                     if (classname.equals("com.icpsltd.stores.activities.QueryByLocation")){
 
                                         if(json.optString("scanid").equals("002")){
-                                            locationid = json.optString("locationid");
-                                            storeid = json.optString("storeid");
-                                            Toast.makeText(ScanQR.this, json.optString("location"), Toast.LENGTH_SHORT).show();
+                                            address = json.optString("address");
+                                            String[] addressArray = address.split("-");
+                                            String store = addressArray[0];
+                                            store = store.trim();
+                                            store = store.replace("_"," ");
+
+
+                                            String shelf = addressArray[1];
+                                            shelf = shelf.trim();
+                                            String level = addressArray[2];
+                                            level = level.trim();
+                                            String space = addressArray[3];
+                                            space = space.replace(" ","");
+
+                                            String shelfNumber = shelf.substring(5);
+                                            String levelNumber = level.substring(5);
+                                            String spaceNumber = space.substring(5);
+
+                                            //locationid = json.optString("locationid");
+                                            //storeid = json.optString("storeid");
+                                            Toast.makeText(ScanQR.this, "Space : "+spaceNumber+", Level : "+levelNumber+", Shelf : "+shelfNumber, Toast.LENGTH_SHORT).show();
                                             image.close();
                                             barcodeScanner.close();
                                             cameraProvider.unbindAll();
                                             finish();
-                                            intent.putExtra("storeid", storeid);
-                                            intent.putExtra("locationid", locationid);
+                                            intent.putExtra("store", store);
+                                            intent.putExtra("shelf", shelfNumber);
+                                            intent.putExtra("level", levelNumber);
+                                            intent.putExtra("space", spaceNumber);
                                             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                             startActivity(intent);
                                             isScanned = true;
@@ -478,15 +521,38 @@ public class ScanQR extends AppCompatActivity {
 
                                         } else if (json.optString("scanid").equals("002") && func != null && func.equals("MoveQR")) {
 
-                                            toStoreID = json.optString("storeid");
-                                            toStoreName = json.optString("store");
-                                            toLocationID = json.optString("locationid");
-                                            toLocationName = json.optString("location");
+
+
+                                            address = json.optString("address");
+                                            String[] addressArray = address.split("-");
+                                            String store = addressArray[0];
+                                            store = store.trim();
+                                            store = store.replace("_"," ");
+                                            String shelf = addressArray[1];
+                                            shelf = shelf.trim();
+                                            String level = addressArray[2];
+                                            level = level.trim();
+                                            String space = addressArray[3];
+                                            space = space.replace(" ","");
+
+                                            String shelfNumber = shelf.substring(5);
+                                            String levelNumber = level.substring(5);
+                                            String spaceNumber = space.substring(5);
+
+                                            //toStoreID = json.optString("storeid");
+                                            //toStoreName = json.optString("store");
+                                            //toLocationID = json.optString("locationid");
+                                            toStoreName = store;
+                                            toLocationName = "Space "+spaceNumber+" of Level "+levelNumber+" in Shelf "+shelfNumber;
 
                                             MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(ScanQR.this);
                                             materialAlertDialogBuilder.setTitle("Move "+productName);
-                                            materialAlertDialogBuilder.setMessage("Are you sure you want to move "+productName+" to " + toLocationName + " in " + toStoreName + "?");
+                                            materialAlertDialogBuilder.setMessage("Are you sure you want to move "+productName+" to " + toLocationName + " at " + toStoreName + "?");
                                             isScanned=true;
+                                            String finalStore = store;
+                                            String finalShelf = shelfNumber;
+                                            String finalLevel = levelNumber;
+                                            String finalSpace = spaceNumber;
                                             materialAlertDialogBuilder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                                                 @Override
                                                 public void onClick(DialogInterface dialog, int which) {
@@ -499,24 +565,24 @@ public class ScanQR extends AppCompatActivity {
                                                     intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                                     intent.putExtra("function", "ReturnQR");
 
-                                                    intent.putExtra("toStoreID",toStoreID);
-                                                    intent.putExtra("toStoreName",toStoreName);
-                                                    intent.putExtra("toLocationID",toLocationID);
-                                                    intent.putExtra("toLocationName",toLocationName);
+                                                    intent.putExtra("toShelf", finalShelf);
+                                                    intent.putExtra("toStore", finalStore);
+                                                    intent.putExtra("toLevel", finalLevel);
+                                                    intent.putExtra("toSpace", finalSpace);
 
-                                                    intent.putExtra("fromStoreID", fromStoreID);
-                                                    intent.putExtra("fromStoreName", fromStoreName);
-                                                    intent.putExtra("fromLocationID",fromLocationID);
-                                                    intent.putExtra("fromLocationName",fromLocationName);
+                                                    intent.putExtra("fromShelf", fromShelf);
+                                                    intent.putExtra("fromStore", fromStore);
+                                                    intent.putExtra("fromLevel", fromLevel);
+                                                    intent.putExtra("fromSpace", fromSpace);
 
                                                     intent.putExtra("productName",productName);
 
                                                     intent.putExtra("moveDate",moveDate);
                                                     intent.putExtra("moveTime",moveTime);
                                                     intent.putExtra("itemCode",itemCode);
+                                                    Log.d("itemCode1",itemCode);
 
-
-
+                                                    alertDialog.dismiss();
                                                     startActivity(intent);
                                                     isScanned = true;
 
@@ -530,7 +596,7 @@ public class ScanQR extends AppCompatActivity {
                                                 }
                                             });
 
-                                            AlertDialog alertDialog = materialAlertDialogBuilder.create();
+                                            alertDialog = materialAlertDialogBuilder.create();
                                             alertDialog.show();
 
 

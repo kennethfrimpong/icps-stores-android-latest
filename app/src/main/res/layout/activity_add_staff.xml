@@ -27,6 +27,7 @@
             app:layout_constraintStart_toStartOf="parent" />
 
         <ImageView
+            android:visibility="gone"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:src="@drawable/outline_settings_24"
@@ -45,7 +46,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Register Staff Access"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
@@ -56,7 +57,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="65dp"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         android:text="as First Last"
         android:textColor="#7a7a7a"
         tools:ignore="TextContrastCheck" />
@@ -65,7 +66,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Search Staff"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
@@ -91,8 +92,8 @@
             android:layout_height="wrap_content"
             android:paddingTop="15dp"
             android:paddingBottom="15dp"
-            android:fontFamily="@font/sfprodisplaymedium"
-            android:inputType="text"
+            android:fontFamily="@font/poppins_medium"
+            android:inputType="textNoSuggestions"
             android:textColor="@color/black"
             android:textColorHint="@color/black" />
 
@@ -115,7 +116,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Remove"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         android:layout_gravity="end"
         android:textColor="@color/icps_red"
         android:layout_marginEnd="20dp"
@@ -155,7 +156,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     android:text="Department:"
                     android:textSize="14sp"
                     android:textColor="#49454f"
@@ -167,7 +168,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="120dp"
-                    android:fontFamily="@font/sfprodisplaybold"
+                    android:fontFamily="@font/poppins_bold"
                     android:text=""
                     android:textColor="#49454f"
                     android:textSize="14sp"
@@ -191,7 +192,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     android:text="Role :"
                     android:textSize="14sp"
                     android:textColor="#49454f"
@@ -199,11 +200,11 @@
                     app:layout_constraintStart_toStartOf="parent" />
 
                 <TextView
-                    android:id="@+id/transaction_time"
+                    android:id="@+id/role"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="120dp"
-                    android:fontFamily="@font/sfprodisplaybold"
+                    android:fontFamily="@font/poppins_bold"
                     android:text=""
                     android:textColor="#49454f"
                     android:textSize="14sp"
@@ -227,7 +228,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     android:text="Added By:"
                     android:textSize="14sp"
                     android:textColor="#49454f"
@@ -235,11 +236,11 @@
                     app:layout_constraintStart_toStartOf="parent" />
 
                 <TextView
-                    android:id="@+id/issuer_name"
+                    android:id="@+id/addedBy"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="120dp"
-                    android:fontFamily="@font/sfprodisplaybold"
+                    android:fontFamily="@font/poppins_bold"
                     android:text=""
                     android:textColor="#49454f"
                     android:textSize="14sp"
@@ -263,7 +264,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     android:text="Date Added:"
                     android:textSize="14sp"
                     android:textColor="#49454f"
@@ -271,11 +272,11 @@
                     app:layout_constraintStart_toStartOf="parent" />
 
                 <TextView
-                    android:id="@+id/book_number"
+                    android:id="@+id/dateAdded"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="1dp"
-                    android:fontFamily="@font/sfprodisplaybold"
+                    android:fontFamily="@font/poppins_bold"
                     android:text=""
                     android:textSize="14sp"
                     android:textColor="#49454f"
@@ -300,7 +301,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     android:text="Time Added:"
                     android:textSize="14sp"
                     android:textColor="#49454f"
@@ -308,11 +309,11 @@
                     app:layout_constraintStart_toStartOf="parent" />
 
                 <TextView
-                    android:id="@+id/receiver_name"
+                    android:id="@+id/timeAdded"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="120dp"
-                    android:fontFamily="@font/sfprodisplaybold"
+                    android:fontFamily="@font/poppins_bold"
                     android:text=""
                     android:textColor="#49454f"
                     android:textSize="14sp"
@@ -338,7 +339,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_marginLeft="10dp"
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     android:text="Access ID Status:"
                     android:textSize="14sp"
                     android:textColor="#49454f"
@@ -350,10 +351,9 @@
                     android:id="@+id/access_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/sfprodisplaybold"
-                    android:text="NOT ENROLLED"
+                    android:fontFamily="@font/poppins_bold"
+                    android:text=""
                     android:textSize="14sp"
-                    android:textColor="@color/icps_red"
                     android:layout_marginStart="20dp"
                     app:layout_constraintStart_toEndOf="@id/access_status_txt"
                     app:layout_constraintBottom_toBottomOf="parent"
@@ -373,7 +373,7 @@
 
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/create_issue"
+        android:id="@+id/capture_access"
         style="@style/Widget.Material3.Button"
         app:backgroundTint="@color/icps_blue"
         android:layout_width="wrap_content"
@@ -383,7 +383,7 @@
         app:iconSize="20dp"
         android:text="Capture Access"
         android:textAllCaps="false"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         app:cornerRadius="20sp"
         android:onClick="captureAccess"
         android:layout_marginTop="5dp"

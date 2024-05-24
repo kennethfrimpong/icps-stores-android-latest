@@ -29,15 +29,15 @@
         <ImageView
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:src="@drawable/outline_settings_24"
+            android:src="@drawable/round_camera_alt_24"
             android:layout_gravity="center"
             android:layout_marginTop="10dp"
             android:layout_marginEnd="20dp"
-            android:contentDescription="Account Icon"
+            android:contentDescription="Camera Icon"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            android:onClick="goToConfigure"/>
+            android:onClick="goToCamera"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -45,18 +45,19 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Create New Issue"
-        android:fontFamily="@font/sfprodisplaybold"
-        android:textSize="25sp"
+        android:fontFamily="@font/poppins_bold"
+        android:textSize="20sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
         android:layout_marginStart="60dp"/>
 
     <TextView
         android:id="@+id/firstLastName"
+        android:layout_marginTop="-5dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="65dp"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         android:text="as First Last"
         android:textColor="#7a7a7a"
         tools:ignore="TextContrastCheck" />
@@ -65,17 +66,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Receiver"
-        android:fontFamily="@font/sfprodisplaybold"
-        android:textSize="25sp"
+        android:fontFamily="@font/poppins_bold"
+        android:textSize="20sp"
         android:textColor="#3f3f3f"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="5dp"
         android:layout_marginStart="20dp"/>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="-5dp"
         android:layout_marginEnd="20dp"
         android:hint="Name"
         android:orientation="horizontal"
@@ -91,8 +92,8 @@
             android:layout_height="wrap_content"
             android:paddingTop="15dp"
             android:paddingBottom="15dp"
-            android:fontFamily="@font/sfprodisplaymedium"
-            android:inputType="text"
+            android:fontFamily="@font/poppins_medium"
+            android:inputType="textNoSuggestions"
             android:textColor="@color/black"
             android:textColorHint="@color/black" />
 
@@ -102,7 +103,7 @@
             android:id="@+id/receiver_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:inputType="text"
             android:textColor="@color/black"
             android:textColorHint="@color/black"/>
@@ -127,7 +128,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Remove"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         android:layout_gravity="end"
         android:textColor="@color/icps_red"
         android:layout_marginEnd="20dp"
@@ -135,37 +136,154 @@
         android:clickable="true"
         android:visibility="gone"/>
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/book_number_layout"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_width="185dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="2dp"
+            android:hint="Book Number"
+            app:boxBackgroundColor="@color/white"
+            app:boxStrokeColor="@color/black"
+            app:placeholderTextColor="@color/black"
+            app:startIconDrawable="@drawable/baseline_123_24"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/book_number"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/poppins_medium"
+                android:maxLength="7"
+                android:inputType="number"
+                android:textColor="@color/black"
+                android:textColorHint="@color/black"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/job_number_layout"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_width="185dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="2dp"
+            android:hint="Job Number"
+            app:boxBackgroundColor="@color/white"
+            app:boxStrokeColor="@color/black"
+            app:placeholderTextColor="@color/black"
+            app:startIconDrawable="@drawable/baseline_123_24"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/job_number"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/poppins_medium"
+                android:maxLength="10"
+                android:inputType="number"
+                android:textColor="@color/black"
+                android:textColorHint="@color/black"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
 
-    <com.google.android.material.textfield.TextInputLayout
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
+        android:layout_marginTop="5dp"
         android:layout_marginEnd="20dp"
-        android:layout_marginTop="7dp"
-        android:hint="Book Number"
-        app:boxBackgroundColor="@color/white"
-        app:boxStrokeColor="@color/black"
-        app:placeholderTextColor="@color/black"
-        app:startIconDrawable="@drawable/baseline_corporate_fare_24"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        android:id="@+id/imageLayout">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/book_number"
-            android:layout_width="match_parent"
+        <ImageView
+            android:layout_width="50dp"
+            android:layout_height="40dp"
+            android:id="@+id/thumbnail"
+            android:contentDescription="Thumbnail"
+            android:src="@color/gray"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:backgroundTint="@color/gray"/>
+
+        <TextView
+            android:id="@+id/imageCaptureStatus"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/sfprodisplaymedium"
-            android:maxLength="7"
-            android:inputType="number"
-            android:textColor="@color/black"
-            android:textColorHint="@color/black"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:text="No Image Captured"
+            android:fontFamily="@font/poppins_semibold"
+            android:textColor="@color/icps_red"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/thumbnail"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginEnd="20dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/previewImage"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:padding="0dp"
+            android:layout_gravity="center"
+            app:iconTint="@color/icps_red"
+            android:textColor="@color/icps_blue"
+            app:strokeColor="@color/icps_blue"
+            android:textSize="12sp"
+            android:text="Preview"
+            android:layout_marginEnd="9dp"
+            android:textAllCaps="false"
+            android:fontFamily="@font/poppins_medium"
+            app:cornerRadius="5sp"
+            app:layout_constraintEnd_toStartOf="@id/removeImage"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/removeImage"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:padding="0dp"
+            android:layout_gravity="center"
+            app:iconTint="@color/icps_red"
+            android:textColor="@color/icps_red"
+            app:strokeColor="@color/icps_red"
+            android:textSize="12sp"
+            android:text="Remove"
+            android:layout_marginStart="5dp"
+            android:textAllCaps="false"
+            android:fontFamily="@font/poppins_medium"
+            app:cornerRadius="5sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Items"
-        android:fontFamily="@font/sfprodisplaybold"
-        android:textSize="25sp"
+        android:fontFamily="@font/poppins_bold"
+        android:textSize="20sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
         android:layout_marginStart="20dp"/>
@@ -208,7 +326,7 @@
                 android:text="No item added yet"
                 android:textSize="16sp"
                 android:textColor="#7a7a7a"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 android:layout_gravity="center_horizontal"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -231,7 +349,7 @@
                 android:textSize="13sp"
                 android:text="Add item"
                 android:textAllCaps="false"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 app:cornerRadius="20sp"
                 android:onClick="add_item"
                 app:layout_constraintTop_toBottomOf="@id/ongoing_item_list"
@@ -255,7 +373,7 @@
         app:iconSize="20dp"
         android:text="Create"
         android:textAllCaps="false"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         app:cornerRadius="20sp"
         android:onClick="create_issue"
         android:layout_marginTop="5dp"

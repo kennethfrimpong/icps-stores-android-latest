@@ -1,5 +1,10 @@
 package com.icpsltd.stores.activities;
 
+import static com.credenceid.biometrics.Biometrics.ResultCode.FAIL;
+import static com.credenceid.biometrics.Biometrics.ResultCode.INTERMEDIATE;
+import static com.credenceid.biometrics.Biometrics.ResultCode.OK;
+import static com.icpsltd.stores.activities.NewIssue.FETCH_DELAY_TIME;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatImageButton;
@@ -19,9 +24,11 @@ import android.nfc.tech.IsoDep;
 import android.nfc.tech.MifareClassic;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
@@ -37,6 +44,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.credenceid.biometrics.ApduCommand;
+import com.credenceid.biometrics.Biometrics;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -45,13 +55,19 @@ import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.icpsltd.stores.biometricactivities.SplashScreen;
+import com.icpsltd.stores.util.App;
+import com.icpsltd.stores.util.Functions;
+import com.icpsltd.stores.util.Variables;
 import com.icpsltd.stores.utils.CustomEditText;
 import com.icpsltd.stores.utils.DBHandler;
 import com.icpsltd.stores.R;
 import com.icpsltd.stores.adapterclasses.RetrievedStaff;
 import com.icpsltd.stores.adapterclasses.RetrievedStock;
+import com.icpsltd.stores.utils.ItemLocationParser;
+import com.icpsltd.stores.utils.MyPrefs;
 import com.icpsltd.stores.utils.Security;
 import com.icpsltd.stores.utils.StockTable;
+import com.icpsltd.stores.utils.TokenChecker;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -117,13 +133,13 @@ public class ReturnStock extends AppCompatActivity {
 
     private Integer new_id;
 
-    private Integer item_qty;
+    private Float item_qty;
 
-    private Integer dbquantity;
+    private Float dbquantity;
 
-    private Integer localquantity;
+    private Float localquantity;
 
-    private Integer new_quantity;
+    private Float new_quantity;
 
     private boolean blocktransaction = false;
     private String localname;
@@ -142,16 +158,38 @@ public class ReturnStock extends AppCompatActivity {
 
     BottomSheetDialog bsbottomSheetDialog;
 
+    private boolean mIsCardReaderOpen = false;
+    private static Biometrics.OnCardStatusListener onCardStatusListener;
+
+    int height;
+
+    private MyPrefs myPrefs;
+
+    TextView returnStatusText;
+
+    private Handler sHandler;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_return_stock);
+        myPrefs = new MyPrefs();
+        returnStatusText = findViewById(R.id.returnStatusText);
+        sHandler = new Handler();
+
+        /*
 
         pendingIntent = PendingIntent.getActivity(
                 this, 0, new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_MUTABLE);
         nfcAdapter =  NfcAdapter.getDefaultAdapter(this);
+
+         */
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        height = displayMetrics.heightPixels;
 
 
         searchStaff = findViewById(R.id.receiver_name);
@@ -184,7 +222,7 @@ public class ReturnStock extends AppCompatActivity {
         TextView asname = findViewById(R.id.firstLastName);
         DBHandler dbHandler = new DBHandler(getApplicationContext());
         String apiHost = dbHandler.getApiHost();
-
+        dbHandler.clearOngoingIssueTable();
 
         try{
             InputStream certInputStream = getResources().openRawResource(R.raw.localhost);
@@ -260,7 +298,16 @@ public class ReturnStock extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                fetchReceiverInfo();
+                sHandler.removeCallbacksAndMessages(null);
+                sHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (searchStaff.getText().toString().length() > 2){
+                            fetchReceiverInfo();
+                        }
+                    }
+                }, FETCH_DELAY_TIME);
+                //fetchReceiverInfo();
             }
 
             @Override
@@ -347,7 +394,7 @@ public class ReturnStock extends AppCompatActivity {
                             canNumber = cursor.getString(cursor.getColumnIndexOrThrow("canNumber"));
                             Log.e("Retrieved ",firstName+" "+middleName+" "+lastName);
 
-                            RetrievedStaff retrievedStaff = new RetrievedStaff(id,firstName,middleName,lastName,department,type,canNumber);
+                            RetrievedStaff retrievedStaff = new RetrievedStaff(id,firstName,middleName,lastName,department,type,canNumber, null, null, null, null);
                             fetchedStaffTable.add(retrievedStaff);
 
                         }
@@ -425,20 +472,21 @@ public class ReturnStock extends AppCompatActivity {
         DBHandler dbHandler = new DBHandler(getApplicationContext());
 
         SQLiteDatabase db = dbHandler.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM ongoingIssueTable",null);
+        Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, AdditionID FROM ongoingIssueTable",null);
         while (cursor.moveToNext()){
             TextView textView = findViewById(R.id.no_item_txt);
             textView.setVisibility(View.GONE);
             String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
             String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-            Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+            Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
             String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
             String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
             String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
             String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+            String issueID = cursor.getString(cursor.getColumnIndexOrThrow("AdditionID"));
             Log.e("Retrieved",name);
 
-            RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit);
+            RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,location,store,unit,issueID,null);
             fetchedOngoingIssueTable.add(retrievedStock);
 
         }
@@ -454,7 +502,7 @@ public class ReturnStock extends AppCompatActivity {
                 RetrievedStock retrievedStock = getItem(position);
                 product_name.setText(retrievedStock.getName());
                 store_location.setText(retrievedStock.getStore());
-                product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
+                product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit()+" | (ID: "+retrievedStock.getAdditionID()+")");
                 product_location.setText(retrievedStock.getLocation());
                 DBHandler dbHandler1 = new DBHandler(getApplicationContext());
 
@@ -482,14 +530,15 @@ public class ReturnStock extends AppCompatActivity {
                                     public void onClick(DialogInterface dialog, int which) {
 
                                         CustomEditText customEditText = editLayout.findViewById(R.id.issue_quantity_update);
-                                        if(Integer.valueOf(customEditText.getText().toString()) > 0){
+                                        if(Float.valueOf(customEditText.getText().toString()) > 0){
                                             //customEditText.setText(String.valueOf(inc+1));
-                                            dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),Integer.valueOf(customEditText.getText().toString()),retrievedStock.getStore(),retrievedStock.getLocation(), retrievedStock.getUnit());
+                                            dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),Float.valueOf(customEditText.getText().toString()),retrievedStock.getStore(),retrievedStock.getLocation(), retrievedStock.getUnit(),retrievedStock.getAdditionID());
                                             Toast.makeText(getApplicationContext(),retrievedStock.getName()+" updated successfully",Toast.LENGTH_SHORT).show();
+                                            TextView no_item_txt = findViewById(R.id.no_item_txt);
+                                            no_item_txt.setVisibility(View.GONE);
                                         } else {
                                             Toast.makeText(getApplicationContext(),"Enter a valid quantity for "+retrievedStock.getName(),Toast.LENGTH_SHORT).show();
                                         }
-
 
                                         //update listview
                                         runOnUiThread(new Runnable() {
@@ -530,9 +579,9 @@ public class ReturnStock extends AppCompatActivity {
                         increasebutton.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                Integer inc = Integer.valueOf(customEditText.getText().toString());
+                                Float inc = Float.valueOf(customEditText.getText().toString());
                                 DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-                                if (Integer.valueOf(customEditText.getText().toString())>0){
+                                if (Float.valueOf(customEditText.getText().toString())>0){
                                     customEditText.setText(String.valueOf(inc+1));
                                 }
 
@@ -552,7 +601,7 @@ public class ReturnStock extends AppCompatActivity {
                         decreasebutton.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                Integer inc = Integer.valueOf(customEditText.getText().toString());
+                                Float inc = Float.valueOf(customEditText.getText().toString());
                                 if (customEditText.getText().toString().equals("1")){
 
                                 } else{
@@ -588,10 +637,13 @@ public class ReturnStock extends AppCompatActivity {
 
         if(rmtv.getVisibility() == View.VISIBLE){
             if (!bknm.getText().toString().equals("")){
+                Log.d("DB Status", dbHandler.checkOngoingIssueTableEmptiness());
                 if(dbHandler.checkOngoingIssueTableEmptiness().equals("notempty")){
+                    mIsCardReaderOpen = true;
 
-                    if(nfcAdapter != null && nfcAdapter.isEnabled()){
-                        nfcAdapter.enableForegroundDispatch(ReturnStock.this, pendingIntent, null, null);
+                    if(mIsCardReaderOpen){
+                        //nfcAdapter.enableForegroundDispatch(ReturnStock.this, pendingIntent, null, null);
+                        /*
 
                         String fromClassName = ReturnStock.class.getName();
                         Intent intent = new Intent(ReturnStock.this, SplashScreen.class);
@@ -615,6 +667,8 @@ public class ReturnStock extends AppCompatActivity {
 
                         //startActivity(intent);
 
+                         */
+
 
 
                         int layout = R.layout.confirm_transaction_sheet;
@@ -627,6 +681,9 @@ public class ReturnStock extends AppCompatActivity {
                         bslinearProgressIndicator = linearProgressIndicator;
                         bsbottomSheetDialog = bottomSheetDialog;
 
+                        new OpenCardReaderAsync().execute();
+
+                        /*
 
                         MaterialButton confirm = bottomSheetDialog.findViewById(R.id.confirm_issue);
                         confirm.setOnClickListener(new View.OnClickListener() {
@@ -782,9 +839,21 @@ public class ReturnStock extends AppCompatActivity {
                                 }
                             }
                         });
+
+                         */
+
                         textView.setText(receiver_name+", Confirm with Access ID");
 
                         bottomSheetDialog.show();
+
+                        bottomSheetDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                            @Override
+                            public void onDismiss(DialogInterface dialog) {
+                                //nfcAdapter.disableForegroundDispatch(NewIssue.this);
+                                //Toast.makeText(NewIssue.this, "Dialog dismissed", Toast.LENGTH_SHORT).show();
+                                mIsCardReaderOpen = false;
+                            }
+                        });
 
                     } else {
                         Toast.makeText(this, "NFC is not available", Toast.LENGTH_SHORT).show();
@@ -962,11 +1031,14 @@ public class ReturnStock extends AppCompatActivity {
  */
     public void showBottomSheet(){
 
-        int layout = R.layout.add_issue_item;
+        int layout = R.layout.add_return_item;
         View bottomSheetView = LayoutInflater.from(this).inflate(layout, null);
 
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
         bottomSheetDialog.setContentView(bottomSheetView);
+        BottomSheetBehavior bottomSheetBehavior = BottomSheetBehavior.from((View) bottomSheetView.getParent());
+        bottomSheetBehavior.setPeekHeight((int) (height*0.9));
+
         LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
         linearProgressIndicator.setVisibility(View.VISIBLE);
         searchString = bottomSheetDialog.findViewById(R.id.stockSearch);
@@ -990,18 +1062,19 @@ public class ReturnStock extends AppCompatActivity {
                         fetchedStockTable = new ArrayList<>();
                         DBHandler dbHandler = new DBHandler(getApplicationContext());
                         SQLiteDatabase db = dbHandler.getReadableDatabase();
-                        Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM stockTable LIMIT 10",null);
+                        Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, ImageAvailable FROM stockTable LIMIT 10",null);
                         while (cursor.moveToNext()){
                             String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
                             String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-                            Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                            Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
                             String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
                             String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
                             String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
                             String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                            String imageAvailable = cursor.getString(cursor.getColumnIndexOrThrow("ImageAvailable"));
                             Log.e("Retrieved",name);
 
-                            RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit);
+                            RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,location,store,unit,null,imageAvailable);
                             fetchedStockTable.add(retrievedStock);
 
                         }
@@ -1061,8 +1134,14 @@ public class ReturnStock extends AppCompatActivity {
                                 ConstraintLayout constraintLayout4 = bottomSheetDialog.findViewById(R.id.quantity_box);
                                 constraintLayout4.setVisibility(View.VISIBLE);
 
+                                MaterialButton itemCodeDisplay = bottomSheetDialog.findViewById(R.id.item_code_display);
+                                itemCodeDisplay.setText(retrievedStock.getID());
+
+                                ConstraintLayout constraintLayout5 = bottomSheetDialog.findViewById(R.id.id_qty_entry_layout);
+                                constraintLayout5.setVisibility(View.VISIBLE);
+
                                 TextInputLayout textInputLayout2 = bottomSheetDialog.findViewById(R.id.quantity_entry_box);
-                                textInputLayout2.setHint("Enter Return quantity");
+                                textInputLayout2.setHint("Enter Return qty");
                                 textInputLayout2.setVisibility(View.VISIBLE);
 
                                 MaterialButton materialButton3 = bottomSheetDialog.findViewById(R.id.add_item_button);
@@ -1095,18 +1174,36 @@ public class ReturnStock extends AppCompatActivity {
 
                                 CustomEditText customEditText = bottomSheetDialog.findViewById(R.id.issue_quantity);
 
+                                TextInputEditText issueIDedit = bottomSheetDialog.findViewById(R.id.transaction_id);
+
+
+
 
                                 materialButton3.setOnClickListener(new View.OnClickListener() {
                                     @Override
                                     public void onClick(View v) {
+                                        String issueID = issueIDedit.getText().toString();
                                         //Toast.makeText(getApplicationContext(),String.valueOf(retrievedStock.getID()),Toast.LENGTH_SHORT).show();
                                         String squantity = customEditText.getText().toString();
+
+                                        if(issueID.equals("")){
+                                            Toast.makeText(ReturnStock.this, "Enter an issue Transaction ID", Toast.LENGTH_SHORT).show();
+                                            return;
+                                        }
+
+                                        if(squantity.equals("")){
+                                            Toast.makeText(ReturnStock.this, "Enter a quantity", Toast.LENGTH_SHORT).show();
+                                            return;
+                                        }
+
                                         try {
-                                            Integer quantity = Integer.valueOf(squantity);
+                                            Float quantity = Float.valueOf(squantity);
 
                                             DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-                                            dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit());
+                                            dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit(),issueID);
                                             Toast.makeText(getApplicationContext(),retrievedStock.getName()+" added successfully",Toast.LENGTH_SHORT).show();
+                                            TextView no_item_txt = findViewById(R.id.no_item_txt);
+                                            no_item_txt.setVisibility(View.GONE);
 
                                             //update listview
                                             runOnUiThread(new Runnable() {
@@ -1134,6 +1231,7 @@ public class ReturnStock extends AppCompatActivity {
                                             */
 
                                         } catch (Exception e){
+                                            e.printStackTrace();
                                             Toast.makeText(getApplicationContext(),"Enter a valid number",Toast.LENGTH_LONG).show();
                                         }
 
@@ -1176,160 +1274,180 @@ public class ReturnStock extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-
-
-                runOnUiThread(new Runnable() {
+                sHandler.removeCallbacksAndMessages(null);
+                sHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
 
-                        String searchedString = searchString.getText().toString();
-                        String firstPer = "%"+searchedString;
-                        String queryString = firstPer+"%";
+                                String searchedString = searchString.getText().toString();
+                                String firstPer = "%"+searchedString;
+                                String queryString = firstPer+"%";
 
 
-                        if (searchString.getText().toString().length() < 1){
-                            //fetches default 10 most issued items if search box is empty, change values in fetchStockStable and here to update results number
-                            GetStockTable fetchStockTable = new GetStockTable(new GetStockTableListener() {
+                                if (searchString.getText().toString().length() < 1){
+                                    //fetches default 10 most issued items if search box is empty, change values in fetchStockStable and here to update results number
+                                    GetStockTable fetchStockTable = new GetStockTable(new GetStockTableListener() {
 
-                                @Override
-                                public void onTaskComplete(JSONArray jsonArray) {
-                                    runOnUiThread(new Runnable() {
                                         @Override
-                                        public void run() {
-                                            LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
-                                            linearProgressIndicator.setVisibility(View.GONE);
-
-
-                                            fetchedStockTable = new ArrayList<>();
-                                            DBHandler dbHandler = new DBHandler(getApplicationContext());
-                                            SQLiteDatabase db = dbHandler.getReadableDatabase();
-                                            Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM stockTable LIMIT 10",null);
-                                            while (cursor.moveToNext()){
-                                                String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
-                                                String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-                                                Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
-                                                String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
-                                                String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
-                                                String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
-                                                String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
-                                                Log.e("Retrieved",name);
-
-                                                RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit);
-                                                fetchedStockTable.add(retrievedStock);
-
-                                            }
-                                            adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
+                                        public void onTaskComplete(JSONArray jsonArray) {
+                                            runOnUiThread(new Runnable() {
                                                 @Override
-                                                public View getView(int position, View convertView, ViewGroup parent) {
-                                                    View view = super.getView(position, convertView, parent);
-
-                                                    TextView store_location = view.findViewById(R.id.store_location);
-                                                    TextView product_name = view.findViewById(R.id.product_name);
-                                                    TextView product_quantity = view.findViewById(R.id.product_quantity);
-                                                    TextView product_location = view.findViewById(R.id.product_location);
-                                                    RetrievedStock retrievedStock = getItem(position);
-                                                    product_name.setText(retrievedStock.getName());
-                                                    product_name.setSelected(true);
-                                                    store_location.setText(retrievedStock.getStore());
-                                                    product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
-                                                    product_location.setText(retrievedStock.getLocation());
+                                                public void run() {
+                                                    LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
+                                                    linearProgressIndicator.setVisibility(View.GONE);
 
 
-                                                    return view;
-                                                }
-                                            };
+                                                    fetchedStockTable = new ArrayList<>();
+                                                    DBHandler dbHandler = new DBHandler(getApplicationContext());
+                                                    SQLiteDatabase db = dbHandler.getReadableDatabase();
+                                                    Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, ImageAvailable FROM stockTable LIMIT 10",null);
+                                                    while (cursor.moveToNext()){
+                                                        String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
+                                                        String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
+                                                        Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                                                        String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
+                                                        String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
+                                                        String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
+                                                        String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                                                        String imageAvailable = cursor.getString(cursor.getColumnIndexOrThrow("ImageAvailable"));
+                                                        Log.e("Retrieved",name);
 
-                                            assert listView != null;
-                                            listView.setAdapter(adapter);
-                                            adapter.notifyDataSetChanged();
+                                                        RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,location,store,unit,null,imageAvailable);
+                                                        fetchedStockTable.add(retrievedStock);
 
-                                            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                                                @Override
-                                                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                                                    RetrievedStock retrievedStock = adapter.getItem(position);
-                                                    TextInputLayout textInputLayout = bottomSheetDialog.findViewById(R.id.search_item_box);
-                                                    textInputLayout.setVisibility(View.GONE);
-                                                    listView.setVisibility(View.GONE);
-                                                    MaterialButton materialButton = bottomSheetDialog.findViewById(R.id.search_item_button);
-                                                    materialButton.setVisibility(View.GONE);
-
-                                                    InputMethodManager manager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                                                    manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
-
-
-                                                    //Set issue quantity views visible
-
-                                                    MaterialButton materialButton2 = bottomSheetDialog.findViewById(R.id.item_code_display);
-                                                    materialButton2.setVisibility(View.VISIBLE);
-
-                                                    ConstraintLayout constraintLayout1 = bottomSheetDialog.findViewById(R.id.name_box);
-                                                    constraintLayout1.setVisibility(View.VISIBLE);
-
-
-                                                    ConstraintLayout constraintLayout2 = bottomSheetDialog.findViewById(R.id.location_box);
-                                                    constraintLayout2.setVisibility(View.VISIBLE);
-
-                                                    ConstraintLayout constraintLayout3 = bottomSheetDialog.findViewById(R.id.store_box);
-                                                    constraintLayout3.setVisibility(View.VISIBLE);
-
-                                                    ConstraintLayout constraintLayout4 = bottomSheetDialog.findViewById(R.id.quantity_box);
-                                                    constraintLayout4.setVisibility(View.VISIBLE);
-
-                                                    TextInputLayout textInputLayout2 = bottomSheetDialog.findViewById(R.id.quantity_entry_box);
-                                                    textInputLayout2.setHint("Enter Return quantity");
-                                                    textInputLayout2.setVisibility(View.VISIBLE);
-
-                                                    MaterialButton materialButton3 = bottomSheetDialog.findViewById(R.id.add_item_button);
-                                                    materialButton3.setVisibility(View.VISIBLE);
-
-                                                    //this populates textviews with selected item
-                                                    String name = retrievedStock.getName();
-                                                    String location = retrievedStock.getLocation();
-                                                    String store = retrievedStock.getStore();
-                                                    String retrievedquantity = String.valueOf(retrievedStock.getQuantity());
-                                                    String retrievedunit = retrievedStock.getUnit();
-
-                                                    TextView name_tv = bottomSheetView.findViewById(R.id.item_name);
-                                                    name_tv.setText(name);
-
-                                                    name_tv.setSelected(true);
-                                                    if (name.length() > 15){
-                                                        name_tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                                                     }
-
-                                                    TextView location_tv = bottomSheetView.findViewById(R.id.item_location);
-                                                    location_tv.setText(location);
-
-                                                    TextView store_tv = bottomSheetView.findViewById(R.id.item_store);
-                                                    store_tv.setText(store);
-
-                                                    TextView qty_tv = bottomSheetView.findViewById(R.id.item_quantity_remaining);
-                                                    qty_tv.setText(retrievedquantity+" "+retrievedunit);
-
-                                                    CustomEditText customEditText = bottomSheetDialog.findViewById(R.id.issue_quantity);
-
-
-                                                    materialButton3.setOnClickListener(new View.OnClickListener() {
+                                                    adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
                                                         @Override
-                                                        public void onClick(View v) {
-                                                            //Toast.makeText(getApplicationContext(),String.valueOf(retrievedStock.getID()),Toast.LENGTH_SHORT).show();
-                                                            String squantity = customEditText.getText().toString();
-                                                            try {
-                                                                Integer quantity = Integer.valueOf(squantity);
+                                                        public View getView(int position, View convertView, ViewGroup parent) {
+                                                            View view = super.getView(position, convertView, parent);
 
-                                                                DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-                                                                dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit());
-                                                                Toast.makeText(getApplicationContext(),retrievedStock.getName()+" added successfully",Toast.LENGTH_SHORT).show();
+                                                            TextView store_location = view.findViewById(R.id.store_location);
+                                                            TextView product_name = view.findViewById(R.id.product_name);
+                                                            TextView product_quantity = view.findViewById(R.id.product_quantity);
+                                                            TextView product_location = view.findViewById(R.id.product_location);
+                                                            RetrievedStock retrievedStock = getItem(position);
+                                                            product_name.setText(retrievedStock.getName());
+                                                            product_name.setSelected(true);
+                                                            store_location.setText(retrievedStock.getStore());
+                                                            product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
+                                                            product_location.setText(retrievedStock.getLocation());
 
-                                                                //update listview
-                                                                runOnUiThread(new Runnable() {
-                                                                    @Override
-                                                                    public void run() {
-                                                                        ongoingIssue();
+
+                                                            return view;
+                                                        }
+                                                    };
+
+                                                    assert listView != null;
+                                                    listView.setAdapter(adapter);
+                                                    adapter.notifyDataSetChanged();
+
+                                                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                                                        @Override
+                                                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                                            RetrievedStock retrievedStock = adapter.getItem(position);
+                                                            TextInputLayout textInputLayout = bottomSheetDialog.findViewById(R.id.search_item_box);
+                                                            textInputLayout.setVisibility(View.GONE);
+                                                            listView.setVisibility(View.GONE);
+                                                            MaterialButton materialButton = bottomSheetDialog.findViewById(R.id.search_item_button);
+                                                            materialButton.setVisibility(View.GONE);
+
+                                                            InputMethodManager manager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                                                            manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+
+
+                                                            //Set issue quantity views visible
+
+                                                            MaterialButton materialButton2 = bottomSheetDialog.findViewById(R.id.item_code_display);
+                                                            materialButton2.setVisibility(View.VISIBLE);
+
+                                                            ConstraintLayout constraintLayout1 = bottomSheetDialog.findViewById(R.id.name_box);
+                                                            constraintLayout1.setVisibility(View.VISIBLE);
+
+
+                                                            ConstraintLayout constraintLayout2 = bottomSheetDialog.findViewById(R.id.location_box);
+                                                            constraintLayout2.setVisibility(View.VISIBLE);
+
+                                                            ConstraintLayout constraintLayout3 = bottomSheetDialog.findViewById(R.id.store_box);
+                                                            constraintLayout3.setVisibility(View.VISIBLE);
+
+                                                            ConstraintLayout constraintLayout4 = bottomSheetDialog.findViewById(R.id.quantity_box);
+                                                            constraintLayout4.setVisibility(View.VISIBLE);
+
+                                                            ConstraintLayout constraintLayout5 = bottomSheetDialog.findViewById(R.id.id_qty_entry_layout);
+                                                            constraintLayout5.setVisibility(View.VISIBLE);
+
+                                                            TextInputLayout textInputLayout2 = bottomSheetDialog.findViewById(R.id.quantity_entry_box);
+                                                            textInputLayout2.setHint("Enter Return quantity");
+                                                            textInputLayout2.setVisibility(View.VISIBLE);
+
+                                                            MaterialButton materialButton3 = bottomSheetDialog.findViewById(R.id.add_item_button);
+                                                            materialButton3.setVisibility(View.VISIBLE);
+
+                                                            //this populates textviews with selected item
+                                                            String name = retrievedStock.getName();
+                                                            String location = retrievedStock.getLocation();
+                                                            String store = retrievedStock.getStore();
+                                                            String retrievedquantity = String.valueOf(retrievedStock.getQuantity());
+                                                            String retrievedunit = retrievedStock.getUnit();
+
+                                                            TextView name_tv = bottomSheetView.findViewById(R.id.item_name);
+                                                            name_tv.setText(name);
+
+                                                            name_tv.setSelected(true);
+                                                            if (name.length() > 15){
+                                                                name_tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                                                            }
+
+                                                            TextView location_tv = bottomSheetView.findViewById(R.id.item_location);
+                                                            location_tv.setText(location);
+
+                                                            TextView store_tv = bottomSheetView.findViewById(R.id.item_store);
+                                                            store_tv.setText(store);
+
+                                                            TextView qty_tv = bottomSheetView.findViewById(R.id.item_quantity_remaining);
+                                                            qty_tv.setText(retrievedquantity+" "+retrievedunit);
+
+                                                            CustomEditText customEditText = bottomSheetDialog.findViewById(R.id.issue_quantity);
+
+                                                            TextInputEditText issueIDedit = bottomSheetDialog.findViewById(R.id.transaction_id);
+
+
+                                                            materialButton3.setOnClickListener(new View.OnClickListener() {
+                                                                @Override
+                                                                public void onClick(View v) {
+                                                                    String issueID = issueIDedit.getText().toString();
+                                                                    //Toast.makeText(getApplicationContext(),String.valueOf(retrievedStock.getID()),Toast.LENGTH_SHORT).show();
+                                                                    String squantity = customEditText.getText().toString();
+
+                                                                    if(issueID.equals("")){
+                                                                        Toast.makeText(ReturnStock.this, "Enter an issue Transaction ID", Toast.LENGTH_SHORT).show();
+                                                                        return;
                                                                     }
-                                                                });
-                                                                bottomSheetDialog.dismiss();
+
+                                                                    if(squantity.equals("")){
+                                                                        Toast.makeText(ReturnStock.this, "Enter a quantity", Toast.LENGTH_SHORT).show();
+                                                                        return;
+                                                                    }
+                                                                    try {
+                                                                        Float quantity = Float.valueOf(squantity);
+
+                                                                        DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+                                                                        dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit(),issueID);
+                                                                        Toast.makeText(getApplicationContext(),retrievedStock.getName()+" added successfully",Toast.LENGTH_SHORT).show();
+                                                                        TextView no_item_txt = findViewById(R.id.no_item_txt);
+                                                                        no_item_txt.setVisibility(View.GONE);
+
+                                                                        //update listview
+                                                                        runOnUiThread(new Runnable() {
+                                                                            @Override
+                                                                            public void run() {
+                                                                                ongoingIssue();
+                                                                            }
+                                                                        });
+                                                                        bottomSheetDialog.dismiss();
 
                                             /*
 
@@ -1347,172 +1465,192 @@ public class ReturnStock extends AppCompatActivity {
                                             }
                                             */
 
-                                                            } catch (Exception e){
-                                                                Toast.makeText(getApplicationContext(),"Enter a valid number",Toast.LENGTH_LONG).show();
-                                                            }
+                                                                    } catch (Exception e){
+                                                                        Toast.makeText(getApplicationContext(),"Enter a valid number",Toast.LENGTH_LONG).show();
+                                                                    }
 
 
 
 
+                                                                }
+                                                            });
                                                         }
                                                     });
+
+
                                                 }
                                             });
-
-
                                         }
-                                    });
-                                }
-                            }, "false");
-                            fetchStockTable.execute();
+                                    }, "false");
+                                    fetchStockTable.execute();
 
 
 
-                        } else {
+                                } else {
 
-                            DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-                            dbHandler1.clearStockTable();
+                                    DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+                                    dbHandler1.clearStockTable();
 
-                            GetStockTable fetchStockTable = new GetStockTable(new GetStockTableListener() {
+                                    GetStockTable fetchStockTable = new GetStockTable(new GetStockTableListener() {
 
-                                @Override
-                                public void onTaskComplete(JSONArray jsonArray) {
-                                    runOnUiThread(new Runnable() {
                                         @Override
-                                        public void run() {
-                                            LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
-                                            linearProgressIndicator.setVisibility(View.GONE);
-
-
-                                            fetchedStockTable = new ArrayList<>();
-                                            DBHandler dbHandler = new DBHandler(getApplicationContext());
-                                            SQLiteDatabase db = dbHandler.getReadableDatabase();
-                                            Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM stockTable LIMIT 20",null);
-                                            while (cursor.moveToNext()){
-                                                String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
-                                                String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-                                                Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
-                                                String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
-                                                String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
-                                                String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
-                                                String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
-                                                Log.e("Retrieved",name);
-
-                                                RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit);
-                                                fetchedStockTable.add(retrievedStock);
-
-                                            }
-                                            adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
+                                        public void onTaskComplete(JSONArray jsonArray) {
+                                            runOnUiThread(new Runnable() {
                                                 @Override
-                                                public View getView(int position, View convertView, ViewGroup parent) {
-                                                    View view = super.getView(position, convertView, parent);
-
-                                                    TextView store_location = view.findViewById(R.id.store_location);
-                                                    TextView product_name = view.findViewById(R.id.product_name);
-                                                    TextView product_quantity = view.findViewById(R.id.product_quantity);
-                                                    TextView product_location = view.findViewById(R.id.product_location);
-                                                    RetrievedStock retrievedStock = getItem(position);
-                                                    product_name.setText(retrievedStock.getName());
-                                                    product_name.setSelected(true);
-                                                    store_location.setText(retrievedStock.getStore());
-                                                    product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
-                                                    product_location.setText(retrievedStock.getLocation());
+                                                public void run() {
+                                                    LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
+                                                    linearProgressIndicator.setVisibility(View.GONE);
 
 
-                                                    return view;
-                                                }
-                                            };
+                                                    fetchedStockTable = new ArrayList<>();
+                                                    DBHandler dbHandler = new DBHandler(getApplicationContext());
+                                                    SQLiteDatabase db = dbHandler.getReadableDatabase();
+                                                    Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, ImageAvailable FROM stockTable LIMIT 20",null);
+                                                    while (cursor.moveToNext()){
+                                                        String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
+                                                        String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
+                                                        Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                                                        String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
+                                                        String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
+                                                        String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
+                                                        String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                                                        String imageAvailable = cursor.getString(cursor.getColumnIndexOrThrow("ImageAvailable"));
+                                                        Log.e("Retrieved",name);
 
-                                            assert listView != null;
-                                            listView.setAdapter(adapter);
-                                            adapter.notifyDataSetChanged();
+                                                        RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,location,store,unit,null,imageAvailable);
+                                                        fetchedStockTable.add(retrievedStock);
 
-                                            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                                                @Override
-                                                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                                                    RetrievedStock retrievedStock = adapter.getItem(position);
-                                                    TextInputLayout textInputLayout = bottomSheetDialog.findViewById(R.id.search_item_box);
-                                                    textInputLayout.setVisibility(View.GONE);
-                                                    listView.setVisibility(View.GONE);
-                                                    MaterialButton materialButton = bottomSheetDialog.findViewById(R.id.search_item_button);
-                                                    materialButton.setVisibility(View.GONE);
-
-                                                    InputMethodManager manager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                                                    manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
-
-
-                                                    //Set issue quantity views visible
-
-                                                    MaterialButton materialButton2 = bottomSheetDialog.findViewById(R.id.item_code_display);
-                                                    materialButton2.setVisibility(View.VISIBLE);
-
-                                                    ConstraintLayout constraintLayout1 = bottomSheetDialog.findViewById(R.id.name_box);
-                                                    constraintLayout1.setVisibility(View.VISIBLE);
-
-
-                                                    ConstraintLayout constraintLayout2 = bottomSheetDialog.findViewById(R.id.location_box);
-                                                    constraintLayout2.setVisibility(View.VISIBLE);
-
-                                                    ConstraintLayout constraintLayout3 = bottomSheetDialog.findViewById(R.id.store_box);
-                                                    constraintLayout3.setVisibility(View.VISIBLE);
-
-                                                    ConstraintLayout constraintLayout4 = bottomSheetDialog.findViewById(R.id.quantity_box);
-                                                    constraintLayout4.setVisibility(View.VISIBLE);
-
-                                                    TextInputLayout textInputLayout2 = bottomSheetDialog.findViewById(R.id.quantity_entry_box);
-                                                    textInputLayout2.setHint("Enter Return quantity");
-                                                    textInputLayout2.setVisibility(View.VISIBLE);
-
-                                                    MaterialButton materialButton3 = bottomSheetDialog.findViewById(R.id.add_item_button);
-                                                    materialButton3.setVisibility(View.VISIBLE);
-
-                                                    //this populates textviews with selected item
-                                                    String name = retrievedStock.getName();
-                                                    String location = retrievedStock.getLocation();
-                                                    String store = retrievedStock.getStore();
-                                                    String retrievedquantity = String.valueOf(retrievedStock.getQuantity());
-                                                    String retrievedunit = retrievedStock.getUnit();
-
-                                                    TextView name_tv = bottomSheetView.findViewById(R.id.item_name);
-                                                    name_tv.setText(name);
-
-                                                    name_tv.setSelected(true);
-                                                    if (name.length() > 15){
-                                                        name_tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                                                     }
-
-                                                    TextView location_tv = bottomSheetView.findViewById(R.id.item_location);
-                                                    location_tv.setText(location);
-
-                                                    TextView store_tv = bottomSheetView.findViewById(R.id.item_store);
-                                                    store_tv.setText(store);
-
-                                                    TextView qty_tv = bottomSheetView.findViewById(R.id.item_quantity_remaining);
-                                                    qty_tv.setText(retrievedquantity+" "+retrievedunit);
-
-                                                    CustomEditText customEditText = bottomSheetDialog.findViewById(R.id.issue_quantity);
-
-
-                                                    materialButton3.setOnClickListener(new View.OnClickListener() {
+                                                    adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
                                                         @Override
-                                                        public void onClick(View v) {
-                                                            //Toast.makeText(getApplicationContext(),String.valueOf(retrievedStock.getID()),Toast.LENGTH_SHORT).show();
-                                                            String squantity = customEditText.getText().toString();
-                                                            try {
-                                                                Integer quantity = Integer.valueOf(squantity);
+                                                        public View getView(int position, View convertView, ViewGroup parent) {
+                                                            View view = super.getView(position, convertView, parent);
 
-                                                                DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-                                                                dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit());
-                                                                Toast.makeText(getApplicationContext(),retrievedStock.getName()+" added successfully",Toast.LENGTH_SHORT).show();
+                                                            TextView store_location = view.findViewById(R.id.store_location);
+                                                            TextView product_name = view.findViewById(R.id.product_name);
+                                                            TextView product_quantity = view.findViewById(R.id.product_quantity);
+                                                            TextView product_location = view.findViewById(R.id.product_location);
+                                                            RetrievedStock retrievedStock = getItem(position);
+                                                            product_name.setText(retrievedStock.getName());
+                                                            product_name.setSelected(true);
+                                                            store_location.setText(retrievedStock.getStore());
+                                                            product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
+                                                            product_location.setText(retrievedStock.getLocation());
 
-                                                                //update listview
-                                                                runOnUiThread(new Runnable() {
-                                                                    @Override
-                                                                    public void run() {
-                                                                        ongoingIssue();
+
+                                                            return view;
+                                                        }
+                                                    };
+
+                                                    assert listView != null;
+                                                    listView.setAdapter(adapter);
+                                                    adapter.notifyDataSetChanged();
+
+                                                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                                                        @Override
+                                                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                                            RetrievedStock retrievedStock = adapter.getItem(position);
+                                                            TextInputLayout textInputLayout = bottomSheetDialog.findViewById(R.id.search_item_box);
+                                                            textInputLayout.setVisibility(View.GONE);
+                                                            listView.setVisibility(View.GONE);
+                                                            MaterialButton materialButton = bottomSheetDialog.findViewById(R.id.search_item_button);
+                                                            materialButton.setVisibility(View.GONE);
+
+                                                            InputMethodManager manager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                                                            manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+
+
+                                                            //Set issue quantity views visible
+
+                                                            MaterialButton materialButton2 = bottomSheetDialog.findViewById(R.id.item_code_display);
+                                                            materialButton2.setVisibility(View.VISIBLE);
+
+                                                            ConstraintLayout constraintLayout1 = bottomSheetDialog.findViewById(R.id.name_box);
+                                                            constraintLayout1.setVisibility(View.VISIBLE);
+
+
+                                                            ConstraintLayout constraintLayout2 = bottomSheetDialog.findViewById(R.id.location_box);
+                                                            constraintLayout2.setVisibility(View.VISIBLE);
+
+                                                            ConstraintLayout constraintLayout3 = bottomSheetDialog.findViewById(R.id.store_box);
+                                                            constraintLayout3.setVisibility(View.VISIBLE);
+
+                                                            ConstraintLayout constraintLayout4 = bottomSheetDialog.findViewById(R.id.quantity_box);
+                                                            constraintLayout4.setVisibility(View.VISIBLE);
+
+                                                            ConstraintLayout constraintLayout5 = bottomSheetDialog.findViewById(R.id.id_qty_entry_layout);
+                                                            constraintLayout5.setVisibility(View.VISIBLE);
+
+                                                            TextInputLayout textInputLayout2 = bottomSheetDialog.findViewById(R.id.quantity_entry_box);
+                                                            textInputLayout2.setHint("Enter Return quantity");
+                                                            textInputLayout2.setVisibility(View.VISIBLE);
+
+                                                            MaterialButton materialButton3 = bottomSheetDialog.findViewById(R.id.add_item_button);
+                                                            materialButton3.setVisibility(View.VISIBLE);
+
+                                                            //this populates textviews with selected item
+                                                            String name = retrievedStock.getName();
+                                                            String location = retrievedStock.getLocation();
+                                                            String store = retrievedStock.getStore();
+                                                            String retrievedquantity = String.valueOf(retrievedStock.getQuantity());
+                                                            String retrievedunit = retrievedStock.getUnit();
+
+                                                            TextView name_tv = bottomSheetView.findViewById(R.id.item_name);
+                                                            name_tv.setText(name);
+
+                                                            name_tv.setSelected(true);
+                                                            if (name.length() > 15){
+                                                                name_tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                                                            }
+
+                                                            TextView location_tv = bottomSheetView.findViewById(R.id.item_location);
+                                                            location_tv.setText(location);
+
+                                                            TextView store_tv = bottomSheetView.findViewById(R.id.item_store);
+                                                            store_tv.setText(store);
+
+                                                            TextView qty_tv = bottomSheetView.findViewById(R.id.item_quantity_remaining);
+                                                            qty_tv.setText(retrievedquantity+" "+retrievedunit);
+
+                                                            CustomEditText customEditText = bottomSheetDialog.findViewById(R.id.issue_quantity);
+
+                                                            TextInputEditText issueIDedit = bottomSheetDialog.findViewById(R.id.transaction_id);
+
+
+                                                            materialButton3.setOnClickListener(new View.OnClickListener() {
+                                                                @Override
+                                                                public void onClick(View v) {
+                                                                    String issueID = issueIDedit.getText().toString();
+                                                                    //Toast.makeText(getApplicationContext(),String.valueOf(retrievedStock.getID()),Toast.LENGTH_SHORT).show();
+                                                                    String squantity = customEditText.getText().toString();
+
+                                                                    if(issueID.equals("")){
+                                                                        Toast.makeText(ReturnStock.this, "Enter an issue Transaction ID", Toast.LENGTH_SHORT).show();
+                                                                        return;
                                                                     }
-                                                                });
-                                                                bottomSheetDialog.dismiss();
+
+                                                                    if(squantity.equals("")){
+                                                                        Toast.makeText(ReturnStock.this, "Enter a quantity", Toast.LENGTH_SHORT).show();
+                                                                        return;
+                                                                    }
+
+                                                                    try {
+                                                                        Float quantity = Float.valueOf(squantity);
+
+                                                                        DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+                                                                        dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit(),issueID);
+                                                                        Toast.makeText(getApplicationContext(),retrievedStock.getName()+" added successfully",Toast.LENGTH_SHORT).show();
+                                                                        TextView no_item_txt = findViewById(R.id.no_item_txt);
+                                                                        no_item_txt.setVisibility(View.GONE);
+
+                                                                        //update listview
+                                                                        runOnUiThread(new Runnable() {
+                                                                            @Override
+                                                                            public void run() {
+                                                                                ongoingIssue();
+                                                                            }
+                                                                        });
+                                                                        bottomSheetDialog.dismiss();
 
                                             /*
 
@@ -1530,32 +1668,32 @@ public class ReturnStock extends AppCompatActivity {
                                             }
                                             */
 
-                                                            } catch (Exception e){
-                                                                Toast.makeText(getApplicationContext(),"Enter a valid number",Toast.LENGTH_LONG).show();
-                                                            }
+                                                                    } catch (Exception e){
+                                                                        Toast.makeText(getApplicationContext(),"Enter a valid number",Toast.LENGTH_LONG).show();
+                                                                    }
 
 
 
 
+                                                                }
+                                                            });
                                                         }
                                                     });
+
+
                                                 }
                                             });
-
-
                                         }
-                                    });
+                                    }, searchedString);
+                                    fetchStockTable.execute();
+
+                                    //if text box is not empty, this fetches 20 items matching the query
+
+
                                 }
-                            }, searchedString);
-                            fetchStockTable.execute();
-
-                            //if text box is not empty, this fetches 20 items matching the query
-
-
-                        }
-                    }
-                });
-
+                            }
+                        });
+                    }},FETCH_DELAY_TIME);
 
             }
 
@@ -1828,10 +1966,20 @@ public class ReturnStock extends AppCompatActivity {
                     RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                     Request request = new Request.Builder()
                             .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                             .post(requestBody)
                             .build();
                     Response response = okHttpClient.newCall(request).execute();
                     String resString = response.body().string();
+
+
+                    JSONObject jsonObject3 = new JSONObject(resString);
+
+                    String status1 = jsonObject3.optString("status");
+                    resString = jsonObject3.optString("data");
+
+                    TokenChecker tokenChecker = new TokenChecker();
+                    tokenChecker.checkToken(status1, getApplicationContext(), ReturnStock.this);
 
                     jsonArray = new JSONArray(resString);
 
@@ -1867,11 +2015,18 @@ public class ReturnStock extends AppCompatActivity {
                         String productName = jsonObject.getString("productName");
 
                         String productDesc = jsonObject.getString("productDesc");
-                        int productQuantity = jsonObject.getInt("productQuantity");
+                        double productQuantity = jsonObject.getDouble("productQuantity");
                         String productStore = jsonObject.getString("productStore");
                         String productLocation = jsonObject.getString("productLocation");
                         String productUnit = jsonObject.getString("productUnit");
-                        dbHandler1.syncStockTable(itemCode,productName,productDesc,productQuantity,productStore,productLocation,productUnit);
+                        String imageAvailable = jsonObject.optString("imageAvailable");
+
+                        ItemLocationParser itemLocationParser = new ItemLocationParser();
+                        String[] parsedLocation = itemLocationParser.parseLocation(productLocation);
+                        productStore = parsedLocation[0];
+                        productLocation = parsedLocation[1];
+
+                        dbHandler1.syncStockTable(itemCode,productName,productDesc,(float)productQuantity,productStore,productLocation,productUnit,imageAvailable);
 
                     }
 
@@ -1921,10 +2076,19 @@ public class ReturnStock extends AppCompatActivity {
                     RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                     Request request = new Request.Builder()
                             .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                             .post(requestBody)
                             .build();
                     Response response = okHttpClient.newCall(request).execute();
                     String resString = response.body().string();
+
+                    JSONObject jsonObject3 = new JSONObject(resString);
+
+                    String status1 = jsonObject3.optString("status");
+                    resString = jsonObject3.optString("result");
+
+                    TokenChecker tokenChecker = new TokenChecker();
+                    tokenChecker.checkToken(status1, getApplicationContext(), ReturnStock.this);
 
                     jsonArray = new JSONArray(resString);
 
@@ -1962,7 +2126,7 @@ public class ReturnStock extends AppCompatActivity {
                         String type = jsonObject.getString("type");
                         String department = jsonObject.getString("department");
                         String canNumber = jsonObject.getString("canNumber");
-                        dbHandler1.syncStaffTable(staffID,firstName,middleName,lastName,type,department,canNumber);
+                        dbHandler1.syncStaffTable(staffID,firstName,middleName,lastName,type,department,canNumber, null, null, null, null);
 
                     }
                 } catch (Exception e){
@@ -2006,15 +2170,23 @@ public class ReturnStock extends AppCompatActivity {
                     RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                     Request request = new Request.Builder()
                             .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                             .post(requestBody)
                             .build();
                     Response response = okHttpClient.newCall(request).execute();
                     resString = response.body().string();
+
+                    JSONObject jsonObject3 = new JSONObject(resString);
+
+                    String status1 = jsonObject3.optString("status");
+                    resString = jsonObject3.optString("data");
+
+                    TokenChecker tokenChecker = new TokenChecker();
+                    tokenChecker.checkToken(status1, getApplicationContext(), ReturnStock.this);
                     response.close();
 
                 } catch (Exception e){
                     e.printStackTrace();
-
                 }
 
             } catch (Exception e) {
@@ -2034,19 +2206,19 @@ public class ReturnStock extends AppCompatActivity {
             DBHandler dbHandler = new DBHandler(getApplicationContext());
             String status = "";
             Integer latestID = null;
+
             try{
 
                 JSONObject jsonObject = new JSONObject(jsonResponse);
                 status = jsonObject.getString("status");
-                latestID = jsonObject.getInt("lastID");
+                if(status.equals("verified")){
+                    latestID = jsonObject.getInt("lastID");
+                }
 
 
             } catch (Exception e){
                 e.printStackTrace();
             }
-
-
-
 
 
             if (status.equals("verified") && latestID != null){
@@ -2066,14 +2238,24 @@ public class ReturnStock extends AppCompatActivity {
                     try{
                         Request request = new Request.Builder()
                                 .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/tst/getDateTime")
+                                .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                                 //.post(requestBody)
                                 .build();
                         Response response = okHttpClient.newCall(request).execute();
                         String resString = response.body().string();
                         Log.i("Response",resString);
 
+                        JSONObject jsonObject3 = new JSONObject(resString);
+
+                        String status1 = jsonObject3.optString("status");
+                        resString = jsonObject3.optString("data");
+
+                        TokenChecker tokenChecker = new TokenChecker();
+                        tokenChecker.checkToken(status1, getApplicationContext(), ReturnStock.this);
+
                         response.close();
                         return resString;
+
                     } catch (Exception e){
                         e.printStackTrace();
 
@@ -2087,13 +2269,12 @@ public class ReturnStock extends AppCompatActivity {
                     new_date = jsonObject.optString("date");
                     new_time = jsonObject.optString("time");
 
-
                     TextInputEditText bk = findViewById(R.id.book_number);
                     String bookNumber = bk.getText().toString();
                     Log.e("RECEIVER DEPARTMENT",": "+receiver_dept);
 
                     dbHandler.addOngoingIssueMeta(new_id, dbHandler.getIssuerID(),issuer_name,staffID,receiver_full_name,receiver_dept,new_date,new_time);
-                    dbHandler.updateOngoingIssueTable(new_id, dbHandler.getIssuerID(),issuer_name,staffID,receiver_full_name,receiver_dept,new_date,new_time,bookNumber);
+                    dbHandler.updateOngoingIssueTable(new_id, dbHandler.getIssuerID(),issuer_name,staffID,receiver_full_name,receiver_dept,new_date,new_time,bookNumber,null);
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -2115,7 +2296,10 @@ public class ReturnStock extends AppCompatActivity {
                                     intent.putExtra("returnerDept","Returner Dept:");
                                     intent.putExtra("returnerName","Returner Name:");
                                     intent.putExtra("itemsReturned","Items Returned");
+                                    bsbottomSheetDialog.dismiss();
+                                    mIsCardReaderOpen = false;
                                     startActivity(intent);
+                                    finish();
 
                                 } else{
 
@@ -2129,6 +2313,8 @@ public class ReturnStock extends AppCompatActivity {
                                     public void run() {
                                         bsbottomSheetDialog.dismiss();
                                         Toast.makeText(ReturnStock.this, "An error occurred while updating database.", Toast.LENGTH_SHORT).show();
+
+
                                     }
                                 });
                             }
@@ -2156,9 +2342,13 @@ public class ReturnStock extends AppCompatActivity {
 
                 if(status.equals("failed")){
                     message = "Wrong Access Card";
-                    nfcAdapter.enableForegroundDispatch(ReturnStock.this, pendingIntent, null, null);
+                    ///nfcAdapter.enableForegroundDispatch(ReturnStock.this, pendingIntent, null, null);
+                    bsbottomSheetDialog.dismiss();
+                    mIsCardReaderOpen = false;
                 } else {
                     message = "Could not authenticate";
+                    bsbottomSheetDialog.dismiss();
+                    mIsCardReaderOpen = false;
                 }
                 Toast.makeText(ReturnStock.this, message, Toast.LENGTH_SHORT).show();
                 bslinearProgressIndicator.setVisibility(View.GONE);
@@ -2189,6 +2379,9 @@ public class ReturnStock extends AppCompatActivity {
             Cursor cursor = db.rawQuery("SELECT * FROM ongoingIssueTable",null);
             String message = null;
             String responsex = null;
+            JSONArray rowData = new JSONArray();
+            TextInputEditText jobNumberInput = findViewById(R.id.job_number);
+            String jobNumber =  jobNumberInput.getText().toString();
 
             /*
             Cursor cursorx = db.rawQuery("SELECT id, ProductQuantity, ProductName FROM ongoingIssueTable",null);
@@ -2221,8 +2414,8 @@ public class ReturnStock extends AppCompatActivity {
 
             while (cursor.moveToNext()){
 
-                Integer id = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-                localquantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
+                localquantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
                 localname = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
 
 
@@ -2231,7 +2424,7 @@ public class ReturnStock extends AppCompatActivity {
 
                 String ProductName = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
                 String ProductDesc = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
-                Integer ProductQuantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                Float ProductQuantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
                 String ProductStore = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
                 String ProductLocation = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
 
@@ -2244,12 +2437,11 @@ public class ReturnStock extends AppCompatActivity {
                 String TransactionTime = cursor.getString(cursor.getColumnIndexOrThrow("TransactionTime"));
                 String BookNumber = cursor.getString(cursor.getColumnIndexOrThrow("BookNumber"));
                 String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                String issueID = cursor.getString(cursor.getColumnIndexOrThrow("AdditionID"));
 
                 //'Stock Addition','Stock Return'
                 String TransactionType = "Stock Addition";
                 String AdditionType = "Stock Return";
-
-
 
                 //get DB quantity
                 String getDBQuantitySQl = "{\"type\":\"sync_addition\",\"condition\":\"compare_quantity\",\"id\":\""+id+"\"}";
@@ -2259,14 +2451,23 @@ public class ReturnStock extends AppCompatActivity {
                     RequestBody requestBody =  RequestBody.create(getDBQuantitySQl, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                     Request request = new Request.Builder()
                             .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
+                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                             .post(requestBody)
                             .build();
                     Response response = okHttpClient.newCall(request).execute();
                     String resString = response.body().string();
 
+                    JSONObject jsonObject3 = new JSONObject(resString);
+
+                    String status1 = jsonObject3.optString("status");
+                    resString = jsonObject3.optString("data");
+
+                    TokenChecker tokenChecker = new TokenChecker();
+                    tokenChecker.checkToken(status1, getApplicationContext(), ReturnStock.this);
+
                     JSONObject jsonObjectProductQuantity = new JSONObject(resString);
 
-                    dbquantity = jsonObjectProductQuantity.getInt("productQuantity");
+                    dbquantity = (float) jsonObjectProductQuantity.getDouble("productQuantity");
                     Log.i("QTY", "DB QUANTITY = "+String.valueOf(dbquantity));
                     Log.i("QTY", "LOCAL QUANTITY = "+String.valueOf(localquantity));
                     response.close();
@@ -2274,46 +2475,54 @@ public class ReturnStock extends AppCompatActivity {
                     new_quantity = dbquantity+localquantity;
                     Log.i("QTY", "NEW QUANTITY = "+String.valueOf(new_quantity));
                     Integer updatedID = new_id;
-                    String sql3 = "{\"type\":\"sync_addition\",\"condition\":\"update_quantity\",\"id\":\""+id+"\",\"new_quantity\":\""+new_quantity+"\",\"new_lastID\":\""+updatedID+"\"}";
+                    //String sql3 = "{\"type\":\"sync_addition\",\"condition\":\"update_quantity\",\"id\":\""+id+"\",\"new_quantity\":\""+new_quantity+"\",\"new_lastID\":\""+updatedID+"\"}";
 
                     try{
+
+                        /*
+
                         RequestBody requestBody1 =  RequestBody.create(sql3, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                         Request request1 = new Request.Builder()
                                 .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
+                                .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                                 .post(requestBody1)
                                 .build();
                         Response response1= okHttpClient.newCall(request1).execute();
                         String resString1 = response1.body().string();
+
+                        JSONObject jsonObject2 = new JSONObject(resString1);
+
+                        String status2 = jsonObject2.optString("status");
+                        resString1 = jsonObject2.optString("data");
+
+                        tokenChecker.checkToken(status2, getApplicationContext(), ReturnStock.this);
+
+
                         jsonObjectProductQuantity = new JSONObject(resString1);
                         message = jsonObjectProductQuantity.optString("status");
                         Log.i("Message", message);
+                        response1.close();
 
-                        String historysql = "{\"type\":\"sync_addition\",\"condition\":\"sync_history\",\"new_quantity\":\""+new_quantity+"\",\"AdditionType\":\""+AdditionType+"\",\"TransactionType\":\""+TransactionType+"\",\"TransactionID\":\""+TransactionID+"\",\"id\":\""+id+"\",\"ProductName\":\""+ProductName+"\",\"ProductDesc\":\""+ProductDesc+"\",\"QuantityAdded\":\""+ProductQuantity+"\",\"ProductStore\":\""+ProductStore+"\",\"ProductLocation\":\""+ProductLocation+"\",\"StaffID\":\""+IssuerID+"\",\"StaffName\":\""+IssuerName+"\",\"ReturnerID\":\""+ReceiverID+"\",\"ReturnerName\":\""+ReceiverName+"\",\"ReturnerDepartment\":\""+ReceiverDept+"\",\"TransactionDate\":\""+TransactionDate+"\",\"TransactionTime\":\""+TransactionTime+"\",\"BookNumber\":\""+BookNumber+"\",\"Balance\":\""+balance+"\",\"ProductUnit\":\""+unit+"\"}";
+                         */
+                        String isLast = "false";
+                        String isFirst = "false";
 
-                        try{
-                            RequestBody requestBodyx =  RequestBody.create(historysql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
-                            Request requestx = new Request.Builder()
-                                    .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
-                                    .post(requestBodyx)
-                                    .build();
-                            Response responsey = okHttpClient.newCall(requestx).execute();
-                            String resStringx = responsey.body().string();
-
-                            try{
-                                JSONObject jsonObject = new JSONObject(resStringx);
-                                responsex = jsonObject.optString("status");
-                            } catch (Exception e){
-                                e.printStackTrace();
-                                responsex = "failed";
-                                blocktransaction = true;
-                            }
-
-                            responsey.close();
-
-                        } catch (Exception e){
-                            e.printStackTrace();
-
+                        if (cursor.isLast()){
+                            isLast = "true";
+                        } else {
+                            isLast = "false";
                         }
+
+                        if (cursor.isFirst()){
+                            isFirst = "true";
+                        } else {
+                            isFirst = "false";
+                        }
+
+                        String historysql = "{\"isLast\":\""+isLast+"\",\"isFirst\":\""+isFirst+"\",\"JobNumber\":\""+jobNumber+"\",\"new_lastID\":\""+updatedID+"\",\"issueID\":\""+issueID+"\",\"type\":\"sync_addition\",\"condition\":\"sync_history\",\"new_quantity\":\""+new_quantity+"\",\"AdditionType\":\""+AdditionType+"\",\"TransactionType\":\""+TransactionType+"\",\"TransactionID\":\""+TransactionID+"\",\"id\":\""+id+"\",\"ProductName\":\""+ProductName+"\",\"ProductDesc\":\""+ProductDesc+"\",\"QuantityAdded\":\""+ProductQuantity+"\",\"ProductStore\":\""+ProductStore+"\",\"ProductLocation\":\""+ProductLocation+"\",\"StaffID\":\""+IssuerID+"\",\"StaffName\":\""+IssuerName+"\",\"ReturnerID\":\""+ReceiverID+"\",\"ReturnerName\":\""+ReceiverName+"\",\"ReturnerDepartment\":\""+ReceiverDept+"\",\"TransactionDate\":\""+TransactionDate+"\",\"TransactionTime\":\""+TransactionTime+"\",\"BookNumber\":\""+BookNumber+"\",\"Balance\":\""+balance+"\",\"ProductUnit\":\""+unit+"\"}";
+                        rowData.put(new JSONObject(historysql));
+
+
 
 
                     } catch (Exception e){
@@ -2329,6 +2538,70 @@ public class ReturnStock extends AppCompatActivity {
 
 
             }
+            Log.d("JSON",rowData.toString());
+
+            String data = "{\"type\":\"sync_addition\",\"condition\":\"sync_history\",\"data\":"+rowData.toString()+"}";
+
+            try{
+                RequestBody requestBodyx =  RequestBody.create(data, okhttp3.MediaType.parse("application/json; charset=utf-8"));
+                Request requestx = new Request.Builder()
+                        .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
+                        .post(requestBodyx)
+                        .build();
+                Response responsey = okHttpClient.newCall(requestx).execute();
+                String resStringx = responsey.body().string();
+                Log.d("Response",resStringx);
+
+                JSONObject jsonObject1 = new JSONObject(resStringx);
+
+                String status0 = jsonObject1.optString("status");
+                resStringx = jsonObject1.optString("data");
+                TokenChecker tokenChecker = new TokenChecker();
+                tokenChecker.checkToken(status0, getApplicationContext(), ReturnStock.this);
+
+                try{
+                    JSONObject jsonObject = new JSONObject(resStringx);
+                    responsex = jsonObject.optString("status");
+
+                    if(jsonObject.optString("status").equals("failed")){
+                        try{
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    returnStatusText.setText(jsonObject.optString("message")+". No data was synced");
+                                    returnStatusText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+
+                                    new Handler().postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            returnStatusText.setText("");
+
+                                        }
+                                    },8000);
+                                }
+                            });
+
+                        } catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+
+
+                } catch (Exception e){
+                    e.printStackTrace();
+                    responsex = "failed";
+                    blocktransaction = true;
+
+
+                }
+
+                responsey.close();
+
+            } catch (Exception e){
+                e.printStackTrace();
+
+            }
 
             return responsex;
         }
@@ -2341,6 +2614,172 @@ public class ReturnStock extends AppCompatActivity {
 
         }
     }
+
+
+    private class CardReading extends AsyncTask<Object, Boolean, Boolean> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            //bottomSheetDialog.show();
+            //Functions.Show_loader(MainActivity.this, false, false);
+        }
+
+        @Override
+        protected Boolean doInBackground(Object... objects) {
+
+            String mAPDUcustom = "FF"  // MiFare Card
+                    + "CA"                              // MiFare Card READ Command
+                    + "00"                              // P1 or "FF"
+                    + "00"                              // P2: Block Number
+                    + "00";                             // Number of bytes to read
+
+            readCardAsync(mAPDUcustom);
+
+
+            return true;
+        }
+
+        protected void onPostExecute() {
+            //Functions.cancel_loader();
+            //bottomSheetDialog.dismiss();
+
+        }
+
+    }
+
+    private void readCardAsync (String APDUcommand){
+        App.BioManager.cardCommand(new ApduCommand(APDUcommand), false, (Biometrics.ResultCode resultcode, byte sw1, byte sw2, byte[] data) ->{
+            if(OK == resultcode){
+                //Toast.makeText(this, "sw1="+sw1, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "sw1="+sw2, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "data="+ Arrays.toString(data), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "HexString="+bytesToHexString(data), Toast.LENGTH_SHORT).show();
+                BigInteger uidInt = new BigInteger(bytesToHexString(data), 16);
+                //Toast.makeText(this, "Integer Value: "+String.valueOf(uidInt), Toast.LENGTH_LONG).show();
+                if(mIsCardReaderOpen){
+                    new ReturnStock.VerifyStaffTask(new ReturnStock.VerifyStaffTaskListener() {
+                        @Override
+                        public void onTaskComplete(String response) {
+                            Log.i("Response",response);
+                        }
+                    }, String.valueOf(uidInt)).execute();
+                }
+
+                //verifyAccessCard(uidInt);
+            } else if (INTERMEDIATE == resultcode) {
+                Toast.makeText(this, "INTERMEDIATE", Toast.LENGTH_SHORT).show();
+            } else if (FAIL == resultcode) {
+                Toast.makeText(this, "FAILED.. \n Did you hold card on reader?", Toast.LENGTH_SHORT).show();
+            }
+
+        });
+    }
+
+    private class OpenCardReaderAsync extends AsyncTask<Object, Boolean, Boolean> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            //Functions.Show_loader(MainActivity.this, false, true);
+//            Functions.fetchAndSaveUsers(LoginActivity.this);
+        }
+
+        @Override
+        protected Boolean doInBackground(Object... objects) {
+            if(mIsCardReaderOpen == true){
+                openCardReader();
+            }
+
+            return true;
+        }
+
+        protected void onPostExecute() {
+            //bottomSheetDialog.dismiss();
+            //App.BioManager.cardCloseCommand();
+            //App.BioManager.cardDisconnectSync(1);
+            //Functions.cancel_loader();
+            //Functions.arrangeFingers(finger_1,finger_2,finger_3,finger_4,cardDetails.getGhanaIdCardFpTemplateInfosList());
+
+        }
+
+    }
+
+    public void openCardReaderMain() {
+        //  SharedPreferences.Editor editor = Functions.getEditor(LoginActivity.this);
+        App.BioManager.cardOpenCommand(new Biometrics.CardReaderStatusListener() {
+            @Override
+            public void onCardReaderOpen(Biometrics.ResultCode resultCode) {
+                if (resultCode == Biometrics.ResultCode.OK) {
+                    //mIsCardReaderOpen = true;
+                    onCardStatusListener = new Biometrics.OnCardStatusListener() {
+                        @Override
+                        public void onCardStatusChange(String s, int prevState, int currentState) {
+                            if (Variables.CARD_ABSENT == currentState) {
+                                //Functions.Show_Alert2(MainActivity.this, "CARD ABSENT", "Place Card on top on the device");
+                            } else {
+                                Variables.mIsDocPresentOnEPassport = true;
+                                //Functions.hide_Alert2();
+
+                                //Toast.makeText(MainActivity.this, "CARD DETECTED", Toast.LENGTH_SHORT).show();
+                                new ReturnStock.CardReading().execute();
+
+                            }
+                        }
+                    };
+
+                    App.BioManager.registerCardStatusListener(onCardStatusListener);
+                    Functions.cancel_loader();
+                } else {
+                    Functions.cancel_loader();
+                    Functions.Show_Alert2(ReturnStock.this, "Card Opening Error", "Error Opening Card Reader" + resultCode.toString());
+                }
+            }
+
+            @Override
+            public void onCardReaderClosed(Biometrics.ResultCode resultCode, Biometrics.CloseReasonCode closeReasonCode) {
+                Functions.cancel_loader();
+//                editor.putBoolean(Variables.is_card_reader_open, false);
+//                editor.commit();
+//                loginNotification.setText(Variables.restart_app);
+//                btnLogin.setEnabled(false);
+                //Functions.Show_Alert(LoginActivity.this,"Card Closed","Error Opening Card Reader");
+            }
+        });
+    }
+
+    private void openCardReader() {
+        boolean isCardReaderOpened = Functions.getSharedPreference(ReturnStock.this).getBoolean(Variables.is_card_reader_open, false);
+
+        if (isCardReaderOpened == false) {
+            openCardReaderMain();
+        } else {
+            boolean cardConnection = App.BioManager.cardConnectSync(1000);
+            if (cardConnection) {
+                onCardStatusListener = new Biometrics.OnCardStatusListener() {
+                    @Override
+                    public void onCardStatusChange(String s, int prevState, int currentState) {
+                        if (Variables.CARD_ABSENT == currentState) {
+                            Functions.Show_Alert2(ReturnStock.this, "CARD ABSENT", "Place Card on top on the device");
+
+                        } else {
+                            Variables.mIsDocPresentOnEPassport = true;
+                            Functions.hide_Alert2();
+
+                        }
+                    }
+                };
+                App.BioManager.registerCardStatusListener(onCardStatusListener);
+                Functions.cancel_loader();
+            } else {
+                openCardReaderMain();
+            }
+        }
+
+
+    }
+
+
+    /*
 
     @Override
     protected void onNewIntent(Intent intent) {
@@ -2477,6 +2916,8 @@ public class ReturnStock extends AppCompatActivity {
         }
     }
 
+     */
+
     private String bytesToHexString ( byte[] bytes){
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
@@ -2485,5 +2926,10 @@ public class ReturnStock extends AppCompatActivity {
         return sb.toString();
     }
 
-
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        DBHandler dbHandler = new DBHandler(getApplicationContext());
+        dbHandler.clearOngoingIssueTable();
+    }
 }

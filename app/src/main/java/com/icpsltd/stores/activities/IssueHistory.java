@@ -4,7 +4,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
@@ -28,11 +30,15 @@ import com.icpsltd.stores.R;
 import com.icpsltd.stores.adapterclasses.RetrievedIssueHistory;
 import com.icpsltd.stores.adapterclasses.RetrievedIssueHistoryMain;
 import com.icpsltd.stores.utils.DBHandler;
+import com.icpsltd.stores.utils.MyPrefs;
+import com.icpsltd.stores.utils.TokenChecker;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -303,7 +309,7 @@ public class IssueHistory extends AppCompatActivity {
                                             String unit = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductUnit"));
                                             Log.e("Retrieved",namex);
 
-                                            RetrievedIssueHistory retrievedStock = new RetrievedIssueHistory(idx,namex,descriptionx,quantityx,departmentx,locationx,storex,issueDatex,unit);
+                                            RetrievedIssueHistory retrievedStock = new RetrievedIssueHistory(idx,namex,descriptionx,quantityx,departmentx,storex,locationx,issueDatex,unit);
                                             fetchedOngoingIssueTable.add(retrievedStock);
 
                                         }
@@ -512,7 +518,7 @@ public class IssueHistory extends AppCompatActivity {
                                             String unitx = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductUnit"));
                                             Log.e("Retrieved",namex);
 
-                                            RetrievedIssueHistory retrievedStock = new RetrievedIssueHistory(idx,namex,descriptionx,quantityx,departmentx,locationx,storex,issueDatex,unitx);
+                                            RetrievedIssueHistory retrievedStock = new RetrievedIssueHistory(idx,namex,descriptionx,quantityx,departmentx,storex,locationx,issueDatex,unitx);
                                             fetchedOngoingIssueTable.add(retrievedStock);
 
                                         }
@@ -564,7 +570,6 @@ public class IssueHistory extends AppCompatActivity {
 
         getUpdatedStockHistory();
 
-
     }
 
     public interface FetchIssueHistoryTaskListener {
@@ -586,6 +591,7 @@ public class IssueHistory extends AppCompatActivity {
             dbHandler1.issueHistoryTable();
             String sql = null;
             JSONArray jsonArray = null;
+            MyPrefs myPrefs = new MyPrefs();
 
             try {
                 sql = "{\"type\":\"getIssueHistory\",\"condition\":\"getTransactionDetails\",\"transactionID\":\""+transactionID+"\"}";
@@ -593,10 +599,19 @@ public class IssueHistory extends AppCompatActivity {
                 RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody)
                         .build();
                 Response response = okHttpClient.newCall(request).execute();
                 String resString = response.body().string();
+
+                JSONObject jsonObject1 = new JSONObject(resString);
+
+                String status = jsonObject1.optString("status");
+                resString = jsonObject1.optString("data");
+
+                TokenChecker tokenChecker = new TokenChecker();
+                tokenChecker.checkToken(status, getApplicationContext(), IssueHistory.this);
 
                 jsonArray = new JSONArray(resString);
                 response.close();
@@ -608,7 +623,7 @@ public class IssueHistory extends AppCompatActivity {
                     for (int i = 0; i < jsonArray.length(); i++) {
                         JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                        int id = jsonObject.getInt("id");
+                        String id = jsonObject.getString("itemCode");
                         String ProductName = jsonObject.getString("ProductName");
                         String ProductDesc = jsonObject.getString("ProductDesc");
                         int ProductQuantity = jsonObject.getInt("ProductQuantity");
@@ -619,6 +634,9 @@ public class IssueHistory extends AppCompatActivity {
                         String TransactionTime = jsonObject.getString("TransactionTime");
                         String BookNumber = jsonObject.getString("BookNumber");
                         String ProductUnit = jsonObject.getString("ProductUnit");
+
+
+
                         dbHandler.syncIssueHistoryTable(id,ProductName,ProductDesc,ProductQuantity,ProductStore,ProductLocation,ReceiverDepartment,TransactionDate,TransactionTime,BookNumber,ProductUnit);
 
                     }
@@ -665,6 +683,7 @@ public class IssueHistory extends AppCompatActivity {
             dbHandler1.issueHistoryTableMain();
             JSONArray jsonArray = null;
             String sql = null;
+            MyPrefs myPrefs = new MyPrefs();
 
             Integer isid = dbHandler1.getIssuerID();
             try {
@@ -679,10 +698,19 @@ public class IssueHistory extends AppCompatActivity {
                 RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody)
                         .build();
                 Response response = okHttpClient.newCall(request).execute();
                 String resString = response.body().string();
+
+                JSONObject jsonObject1 = new JSONObject(resString);
+
+                String status1 = jsonObject1.optString("status");
+                resString = jsonObject1.optString("data");
+
+                TokenChecker tokenChecker = new TokenChecker();
+                tokenChecker.checkToken(status1, getApplicationContext(), IssueHistory.this);
 
                 jsonArray = new JSONArray(resString);
                 response.close();

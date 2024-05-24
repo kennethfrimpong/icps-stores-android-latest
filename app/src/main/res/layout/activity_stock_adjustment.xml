@@ -33,6 +33,7 @@
             android:layout_gravity="center"
             android:layout_marginTop="10dp"
             android:layout_marginEnd="20dp"
+            android:visibility="gone"
             android:contentDescription="Account Icon"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -44,7 +45,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Stock Adjustment"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
@@ -55,7 +56,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="65dp"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         android:text="as First Last"
         android:textColor="#7a7a7a"
         tools:ignore="TextContrastCheck" />
@@ -64,7 +65,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Adjustment Type"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
@@ -94,6 +95,47 @@
 
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/adjustmentReasonLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="7dp"
+        android:hint="Adjustment Reason"
+        app:boxBackgroundColor="@color/white"
+        app:boxStrokeColor="@color/black"
+        app:placeholderTextColor="@color/black"
+        app:startIconDrawable="@drawable/ic_baseline_abc_24"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/adjustmentReason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/poppins_medium"
+            android:inputType="textMultiLine"
+            android:lines="3"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:id="@+id/adjustmentStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:text=""
+        android:fontFamily="@font/poppins_medium"
+        android:textSize="12sp"
+        android:textColor="#B71C1C"
+        android:layout_marginTop="5dp"
+        android:layout_gravity="center"/>
+
+
 
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -112,7 +154,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Remove"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         android:layout_gravity="end"
         android:textColor="@color/icps_red"
         android:layout_marginEnd="20dp"
@@ -125,7 +167,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Items"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
@@ -168,7 +210,7 @@
                 android:text="No item added yet"
                 android:textSize="16sp"
                 android:textColor="#7a7a7a"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 android:layout_gravity="center_horizontal"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -191,7 +233,7 @@
                 android:textSize="13sp"
                 android:text="Add item"
                 android:textAllCaps="false"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 app:cornerRadius="20sp"
                 android:onClick="add_item"
                 app:layout_constraintTop_toBottomOf="@id/ongoing_item_list"
@@ -215,7 +257,7 @@
         app:iconSize="20dp"
         android:text="Adjust"
         android:textAllCaps="false"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         app:cornerRadius="20sp"
         android:onClick="create_issue"
         android:layout_marginTop="5dp"

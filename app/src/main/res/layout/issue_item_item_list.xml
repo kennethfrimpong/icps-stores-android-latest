@@ -36,7 +36,7 @@
                 android:text="Store Location"
                 app:layout_constraintStart_toEndOf="@id/shipping_box"
                 app:layout_constraintTop_toTopOf="parent"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 android:textSize="10sp"
                 android:textColor="#49454f"
                 android:layout_marginTop="3dp"/>
@@ -45,7 +45,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Product Name"
-                android:fontFamily="@font/sfprodisplaybold"
+                android:fontFamily="@font/poppins_bold"
                 app:layout_constraintStart_toEndOf="@id/shipping_box"
                 app:layout_constraintBottom_toTopOf="@id/product_quantity"
                 app:layout_constraintTop_toBottomOf="@id/store_location"
@@ -57,7 +57,7 @@
                 android:layout_height="wrap_content"
                 android:text="Qty: 50"
                 android:textSize="10sp"
-                android:fontFamily="@font/sfprodisplayregular"
+                android:fontFamily="@font/poppins_regular"
                 app:layout_constraintTop_toBottomOf="@id/product_name"
                 app:layout_constraintStart_toEndOf="@id/shipping_box"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -71,12 +71,11 @@
                 android:text="Location"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
                 android:layout_marginEnd="20dp"
-                android:layout_marginBottom="10dp"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 android:textColor="#49454f"
-                android:textSize="10sp"/>
+                android:textSize="10sp"
+                android:layout_marginTop="3dp"/>
 
 
         </androidx.constraintlayout.widget.ConstraintLayout>

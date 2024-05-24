@@ -41,7 +41,7 @@
         android:text="Scan QR code"
         android:textColor="#FFFFFF"
         android:textSize="20sp"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         app:layout_constraintBottom_toTopOf="@+id/camera_bounds"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.icpsltd.stores"
-        minSdk 23
+        minSdk 26
         targetSdk 33
         versionCode 1
         versionName "1.0"
@@ -60,6 +60,9 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
 
     implementation 'com.airbnb.android:lottie:6.1.0'
+    implementation 'androidx.security:security-crypto:1.0.0'
+
+    implementation 'com.google.code.gson:gson:2.11.0'
 
 
 }

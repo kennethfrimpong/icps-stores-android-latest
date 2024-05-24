@@ -31,6 +31,8 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
+            <!--
+
             <ImageView
                 android:layout_width="30dp"
                 android:layout_height="30dp"
@@ -43,6 +45,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
                 android:onClick="startQR"/>
+                -->
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -50,27 +53,28 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Query Location"
-            android:fontFamily="@font/sfprodisplaybold"
+            android:fontFamily="@font/poppins_bold"
             android:textSize="25sp"
             android:textColor="#3f3f3f"
-            android:layout_marginTop="10dp"
             android:layout_marginStart="60dp"/>
 
         <TextView
+            android:layout_marginTop="-5dp"
             android:id="@+id/firstLastName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="65dp"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:text="as First Last"
             android:textColor="#7a7a7a"
             tools:ignore="TextContrastCheck" />
 
+        <!--
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Location Information"
-            android:fontFamily="@font/sfprodisplaybold"
+            android:fontFamily="@font/poppins_bold"
             android:textSize="25sp"
             android:textColor="#3f3f3f"
             android:layout_marginTop="10dp"
@@ -131,6 +135,108 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
 
+        </com.google.android.material.card.MaterialCardView>
+
+        -->
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            app:cardCornerRadius="5dp"
+            app:strokeColor="@color/black"
+            app:strokeWidth="1dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="#f6f6f6">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/scanHelperText"
+                    android:layout_marginTop="30dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Scan a space QR Code \n to find all items saved in that space"
+                    android:textColor="#3f3f3f"
+                    android:textAlignment="center"
+                    android:fontFamily="@font/poppins_regular"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:id="@+id/store_name"
+                    android:visibility="gone"
+                    android:layout_marginTop="15dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Store Name"
+                    android:textColor="#000000"
+                    android:textAlignment="center"
+                    android:fontFamily="@font/poppins_semibold"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    android:textSize="20sp"/>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/locationContainer"
+                    android:visibility="gone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="50dp"
+                    android:layout_gravity="center">
+
+                    <TextView
+                        android:id="@+id/shelf"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Shelf : X"
+                        android:textColor="#515151"
+                        android:textAlignment="center"
+                        android:fontFamily="@font/poppins_semibold"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/level"
+                        android:textSize="16sp"/>
+
+                    <TextView
+                        android:id="@+id/level"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Level : X"
+                        android:textColor="#515151"
+                        android:textAlignment="center"
+                        android:fontFamily="@font/poppins_semibold"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/shelf"
+                        app:layout_constraintEnd_toStartOf="@id/space"
+                        android:textSize="16sp"/>
+
+                    <TextView
+                        android:id="@+id/space"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Space : X"
+                        android:textColor="#515151"
+                        android:textAlignment="center"
+                        android:fontFamily="@font/poppins_semibold"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/level"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        android:textSize="16sp"/>
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+            </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
@@ -150,10 +256,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Items"
-            android:fontFamily="@font/sfprodisplaybold"
+            android:fontFamily="@font/poppins_bold"
             android:textSize="25sp"
             android:textColor="#3f3f3f"
-            android:layout_marginTop="10dp"
             android:layout_marginStart="20dp"/>
 
 
@@ -194,7 +299,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Loading..."
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     app:layout_constraintTop_toBottomOf="@id/fetch_progress"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -219,7 +324,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Showing x results"
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     app:layout_constraintTop_toBottomOf="@id/location_listview"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -239,14 +344,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            app:icon="@drawable/baseline_search_24"
+            app:icon="@drawable/baseline_qr_code_scanner_24"
             app:iconSize="20dp"
-            android:text="Search"
+            android:text="Scan QR"
             android:textAllCaps="false"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             app:cornerRadius="20sp"
-            android:onClick="search"
             android:layout_marginTop="5dp"
+            android:onClick="startQR"
             android:layout_marginBottom="5dp"/>
 
     </LinearLayout>

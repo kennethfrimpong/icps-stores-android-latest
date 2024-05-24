@@ -1,5 +1,10 @@
 package com.icpsltd.stores.activities;
 
+import static com.credenceid.biometrics.Biometrics.ResultCode.FAIL;
+import static com.credenceid.biometrics.Biometrics.ResultCode.INTERMEDIATE;
+import static com.credenceid.biometrics.Biometrics.ResultCode.OK;
+import static com.icpsltd.stores.activities.NewIssue.FETCH_DELAY_TIME;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatImageButton;
@@ -13,15 +18,18 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.nfc.tech.MifareClassic;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
@@ -37,20 +45,30 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.credenceid.biometrics.ApduCommand;
+import com.credenceid.biometrics.Biometrics;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.icpsltd.stores.util.App;
+import com.icpsltd.stores.util.Functions;
+import com.icpsltd.stores.util.Variables;
 import com.icpsltd.stores.utils.CustomEditText;
 import com.icpsltd.stores.utils.DBHandler;
 import com.icpsltd.stores.R;
 import com.icpsltd.stores.adapterclasses.RetrievedStaff;
 import com.icpsltd.stores.adapterclasses.RetrievedStock;
+import com.icpsltd.stores.utils.ItemLocationParser;
+import com.icpsltd.stores.utils.MyPrefs;
 import com.icpsltd.stores.utils.Security;
 import com.icpsltd.stores.utils.StockTable;
+import com.icpsltd.stores.utils.TokenChecker;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -117,13 +135,13 @@ public class StockAdjustment extends AppCompatActivity {
 
     private Integer new_id;
 
-    private Integer item_qty;
+    private Float item_qty;
 
-    private Integer dbquantity;
+    private Float dbquantity;
 
-    private Integer localquantity;
+    private Float localquantity;
 
-    private Integer new_quantity;
+    private Float new_quantity;
 
     private boolean blocktransaction = false;
     private String localname;
@@ -149,20 +167,41 @@ public class StockAdjustment extends AppCompatActivity {
 
     BottomSheetDialog bsbottomSheetDialog;
 
+    private boolean mIsCardReaderOpen = false;
+    private static Biometrics.OnCardStatusListener onCardStatusListener;
+
+    int height;
+
+    private MyPrefs myPrefs;
+
+    private Handler sHandler;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_stock_adjustment);
+        myPrefs = new MyPrefs();
+        sHandler = new Handler();
+
+
+        /*
 
         pendingIntent = PendingIntent.getActivity(
                 this, 0, new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_MUTABLE);
         nfcAdapter =  NfcAdapter.getDefaultAdapter(this);
 
+         */
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        height = displayMetrics.heightPixels;
+
         TextView asname = findViewById(R.id.firstLastName);
         DBHandler dbHandler = new DBHandler(getApplicationContext());
         String apiHost = dbHandler.getApiHost();
+        dbHandler.clearOngoingIssueTable();
 
         asname.setText("as "+dbHandler.getFirstName()+" "+dbHandler.getLastName());
         ongoingListview = findViewById(R.id.ongoing_item_list);
@@ -235,7 +274,7 @@ public class StockAdjustment extends AppCompatActivity {
 
 
 
-        int layout = R.layout.add_issue_item;
+        int layout = R.layout.add_adjustment_item;
         View bottomSheet = LayoutInflater.from(this).inflate(layout, null);
 
 
@@ -256,11 +295,13 @@ public class StockAdjustment extends AppCompatActivity {
                 return false;
             }
         });
+
+        dbHandler.close();
     }
 
     private boolean isTouchInsideBottomSheetContent(MotionEvent event) {
 
-        int layout = R.layout.add_issue_item;
+        int layout = R.layout.add_adjustment_item;
         View bottomSheet = LayoutInflater.from(this).inflate(layout, null);
         int bottomSheetHeight = (int) (bottomSheet.getHeight() * 0.6); // Assume the bottom sheet occupies the bottom 60% of the screen
         int[] location = new int[2];
@@ -285,20 +326,21 @@ public class StockAdjustment extends AppCompatActivity {
         DBHandler dbHandler = new DBHandler(getApplicationContext());
 
         SQLiteDatabase db = dbHandler.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM ongoingIssueTable",null);
+        Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, AdditionID FROM ongoingIssueTable",null);
         while (cursor.moveToNext()){
             TextView textView = findViewById(R.id.no_item_txt);
             textView.setVisibility(View.GONE);
             String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
             String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-            Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+            Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
             String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
             String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
             String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
             String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+            String additionID = cursor.getString(cursor.getColumnIndexOrThrow("AdditionID"));
             Log.e("Retrieved",name);
 
-            RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit);
+            RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,location,store,unit,additionID,null);
             fetchedOngoingIssueTable.add(retrievedStock);
 
         }
@@ -315,7 +357,7 @@ public class StockAdjustment extends AppCompatActivity {
                 product_name.setText(retrievedStock.getName());
                 product_name.setSelected(true);
                 store_location.setText(retrievedStock.getStore());
-                product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
+                product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit()+" | (ID: "+retrievedStock.getAdditionID()+")");
                 product_location.setText(retrievedStock.getLocation());
                 DBHandler dbHandler1 = new DBHandler(getApplicationContext());
 
@@ -343,9 +385,9 @@ public class StockAdjustment extends AppCompatActivity {
                                     public void onClick(DialogInterface dialog, int which) {
 
                                         CustomEditText customEditText = editLayout.findViewById(R.id.issue_quantity_update);
-                                        if(Integer.valueOf(customEditText.getText().toString()) > 0){
+                                        if(Float.valueOf(customEditText.getText().toString()) > 0){
                                             //customEditText.setText(String.valueOf(inc+1));
-                                            dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),Integer.valueOf(customEditText.getText().toString()),retrievedStock.getStore(),retrievedStock.getLocation(), retrievedStock.getUnit());
+                                            dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),Float.valueOf(customEditText.getText().toString()),retrievedStock.getStore(),retrievedStock.getLocation(), retrievedStock.getUnit(),retrievedStock.getAdditionID());
                                             Toast.makeText(getApplicationContext(),retrievedStock.getName()+" updated successfully",Toast.LENGTH_SHORT).show();
                                         } else {
                                             Toast.makeText(getApplicationContext(),"Enter a valid quantity for "+retrievedStock.getName(),Toast.LENGTH_SHORT).show();
@@ -381,6 +423,8 @@ public class StockAdjustment extends AppCompatActivity {
                                             tv.setVisibility(View.VISIBLE);
                                         }
 
+                                        dbHandler1.close();
+
                                     }
                                 });
                         AlertDialog alertDialog = materialAlertDialogBuilder.create();
@@ -391,9 +435,9 @@ public class StockAdjustment extends AppCompatActivity {
                         increasebutton.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                Integer inc = Integer.valueOf(customEditText.getText().toString());
+                                Float inc = Float.valueOf(customEditText.getText().toString());
                                 DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-                                if (Integer.valueOf(customEditText.getText().toString())>0){
+                                if (Float.valueOf(customEditText.getText().toString())>0){
                                     customEditText.setText(String.valueOf(inc+1));
                                 }
 
@@ -407,13 +451,15 @@ public class StockAdjustment extends AppCompatActivity {
                                  }
                                  **/
 
+                                dbHandler1.close();
+
 
                             }
                         });
                         decreasebutton.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                Integer inc = Integer.valueOf(customEditText.getText().toString());
+                                Float inc = Float.valueOf(customEditText.getText().toString());
                                 if (customEditText.getText().toString().equals("1")){
 
                                 } else{
@@ -431,6 +477,7 @@ public class StockAdjustment extends AppCompatActivity {
                     }
                 });
 
+                dbHandler1.close();
                 return view;
             }
         };
@@ -439,19 +486,33 @@ public class StockAdjustment extends AppCompatActivity {
         ongoingListview.setAdapter(ongoingIssueAdapter);
         ongoingIssueAdapter.notifyDataSetChanged();
 
+        dbHandler.close();
+        db.close();
+
     }
 
 
     public void create_issue(View view) {
+
+        EditText adjustmentReason = findViewById(R.id.adjustmentReason);
+        String reason = adjustmentReason.getText().toString();
+
+        if(reason.length() < 5 ){
+            Toast.makeText(this, "Enter a valid reason", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+
         TextView rmtv = findViewById(R.id.remove);
         EditText bknm = findViewById(R.id.book_number);
         DBHandler dbHandler = new DBHandler(getApplicationContext());
 
                 if(dbHandler.checkOngoingIssueTableEmptiness().equals("notempty")){
+                    mIsCardReaderOpen = true;
 
-                    if(nfcAdapter != null && nfcAdapter.isEnabled()){
+                    if(mIsCardReaderOpen){
 
-                        nfcAdapter.enableForegroundDispatch(StockAdjustment.this, pendingIntent, null, null);
+                        //nfcAdapter.enableForegroundDispatch(StockAdjustment.this, pendingIntent, null, null);
                         int layout = R.layout.confirm_transaction_sheet;
                         View bottomSheetView = LayoutInflater.from(this).inflate(layout, null);
                         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
@@ -461,6 +522,8 @@ public class StockAdjustment extends AppCompatActivity {
                         LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.verify_progress);
                         bslinearProgressIndicator = linearProgressIndicator;
                         bsbottomSheetDialog = bottomSheetDialog;
+
+                        /*
 
 
                         MaterialButton confirm = bottomSheetDialog.findViewById(R.id.confirm_issue);
@@ -580,7 +643,7 @@ public class StockAdjustment extends AppCompatActivity {
                                                                 }
                                                             });
                                                             syncHistoryTask.execute();
-                                                            */
+
                                                             } else {
                                                                 runOnUiThread(new Runnable() {
                                                                     @Override
@@ -618,8 +681,23 @@ public class StockAdjustment extends AppCompatActivity {
                                 }
                             }
                         });
+
+
+                         */
+
+                        new OpenCardReaderAsync().execute();
+
                         textView.setText("Ask a colleague to confirm with Access ID");
                         bottomSheetDialog.show();
+
+                        bottomSheetDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                            @Override
+                            public void onDismiss(DialogInterface dialog) {
+                                //nfcAdapter.disableForegroundDispatch(NewIssue.this);
+                                //Toast.makeText(NewIssue.this, "Dialog dismissed", Toast.LENGTH_SHORT).show();
+                                mIsCardReaderOpen = false;
+                            }
+                        });
 
                     } else {
                         Toast.makeText(this, "NFC is not available", Toast.LENGTH_SHORT).show();
@@ -630,17 +708,24 @@ public class StockAdjustment extends AppCompatActivity {
                     Toast.makeText(this, "Add at least 1 item", Toast.LENGTH_SHORT).show();
                 }
 
+                dbHandler.close();
+
     }
+
+
     public void showBottomSheet(){
 
         if (isCheckedx){
 
-
-            int layout = R.layout.add_issue_item;
+            int layout = R.layout.add_adjustment_item;
             View bottomSheetView = LayoutInflater.from(this).inflate(layout, null);
 
             BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
             bottomSheetDialog.setContentView(bottomSheetView);
+
+            BottomSheetBehavior bottomSheetBehavior = BottomSheetBehavior.from((View) bottomSheetView.getParent());
+            bottomSheetBehavior.setPeekHeight((int) (height*0.9));
+
             LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
             linearProgressIndicator.setVisibility(View.VISIBLE);
             searchString = bottomSheetDialog.findViewById(R.id.stockSearch);
@@ -663,18 +748,19 @@ public class StockAdjustment extends AppCompatActivity {
                             fetchedStockTable = new ArrayList<>();
                             DBHandler dbHandler = new DBHandler(getApplicationContext());
                             SQLiteDatabase db = dbHandler.getReadableDatabase();
-                            Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM stockTable LIMIT 10",null);
+                            Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, ImageAvailable FROM stockTable LIMIT 10",null);
                             while (cursor.moveToNext()){
                                 String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
                                 String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-                                Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                                Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
                                 String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
                                 String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
                                 String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
                                 String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                                String imageAvailable = cursor.getString(cursor.getColumnIndexOrThrow("ImageAvailable"));
                                 Log.e("Retrieved",name);
 
-                                RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,store,location,unit);
+                                RetrievedStock retrievedStock = new RetrievedStock(id,name,description,quantity,location,store,unit,null,imageAvailable);
                                 fetchedStockTable.add(retrievedStock);
 
                             }
@@ -717,7 +803,7 @@ public class StockAdjustment extends AppCompatActivity {
                                     manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
 
 
-                                    //Set issue quantity views visible
+                                    //Set adjustment quantity views visible
 
                                     MaterialButton materialButton2 = bottomSheetDialog.findViewById(R.id.item_code_display);
                                     materialButton2.setVisibility(View.VISIBLE);
@@ -735,11 +821,16 @@ public class StockAdjustment extends AppCompatActivity {
                                     ConstraintLayout constraintLayout4 = bottomSheetDialog.findViewById(R.id.quantity_box);
                                     constraintLayout4.setVisibility(View.VISIBLE);
 
+                                    MaterialButton itemCodeDisplay = bottomSheetDialog.findViewById(R.id.item_code_display);
+                                    itemCodeDisplay.setText(retrievedStock.getID());
+
                                     TextInputLayout textInputLayout2 = bottomSheetDialog.findViewById(R.id.quantity_entry_box);
+                                    ConstraintLayout constraintLayout5 = bottomSheetDialog.findViewById(R.id.id_qty_entry_layout);
+                                    constraintLayout5.setVisibility(View.VISIBLE);
                                     if(isAdd){
-                                        textInputLayout2.setHint("Enter addition quantity");
+                                        textInputLayout2.setHint("Addition quantity");
                                     } else {
-                                        textInputLayout2.setHint("Enter deduction quantity");
+                                        textInputLayout2.setHint("Deduction quantity");
                                     }
                                     textInputLayout2.setVisibility(View.VISIBLE);
 
@@ -772,19 +863,32 @@ public class StockAdjustment extends AppCompatActivity {
 
                                     CustomEditText customEditText = bottomSheetDialog.findViewById(R.id.issue_quantity);
 
+                                    TextInputEditText additionIDedit = bottomSheetDialog.findViewById(R.id.transaction_id);
+
+
 
                                     materialButton3.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
-                                            //Toast.makeText(getApplicationContext(),String.valueOf(retrievedStock.getID()),Toast.LENGTH_SHORT).show();
+                                            String additionID = additionIDedit.getText().toString();
+
                                             String squantity = customEditText.getText().toString();
+                                            if(additionID.equals("")){
+                                                Toast.makeText(StockAdjustment.this, "Enter an addition Transaction ID", Toast.LENGTH_SHORT).show();
+                                                return;
+                                            }
+
+                                            if(squantity.equals("")){
+                                                Toast.makeText(StockAdjustment.this, "Enter a quantity", Toast.LENGTH_SHORT).show();
+                                                return;
+                                            }
+
+
                                             try {
-                                                Integer quantity = Integer.valueOf(squantity);
-
+                                                Float quantity = Float.valueOf(squantity);
                                                 DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-                                                dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit());
+                                                dbHandler1.addToOngoingIssue(retrievedStock.getID(),retrievedStock.getName(),retrievedStock.getDescription(),quantity,retrievedStock.getStore(),retrievedStock.getLocation(),retrievedStock.getUnit(), additionID);
                                                 Toast.makeText(getApplicationContext(),retrievedStock.getName()+" added successfully",Toast.LENGTH_SHORT).show();
-
                                                 //update listview
                                                 runOnUiThread(new Runnable() {
                                                     @Override
@@ -794,33 +898,19 @@ public class StockAdjustment extends AppCompatActivity {
                                                 });
                                                 bottomSheetDialog.dismiss();
 
-                                            /*
-
-                                            if (!squantity.equals("") && !squantity.equals("0")){
-
-                                                if (quantity <= retrievedStock.getQuantity()) {
-
-
-                                                } else if (quantity > retrievedStock.getQuantity()) {
-                                                    Toast.makeText(getApplicationContext(),"Error: Quantity entered exceeds retrieved quantity ",Toast.LENGTH_LONG).show();
-
-                                                }
-                                            } else {
-                                                Toast.makeText(getApplicationContext(),"Enter a valid quantity ",Toast.LENGTH_LONG).show();
-                                            }
-                                            */
 
                                             } catch (Exception e){
                                                 Toast.makeText(getApplicationContext(),"Enter a valid number",Toast.LENGTH_LONG).show();
+                                                e.printStackTrace();
                                             }
-
-
-
 
                                         }
                                     });
                                 }
                             });
+
+                            dbHandler.close();
+
 
 
                         }
@@ -853,129 +943,147 @@ public class StockAdjustment extends AppCompatActivity {
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {
 
-
-
-                    runOnUiThread(new Runnable() {
+                    sHandler.removeCallbacksAndMessages(null);
+                    sHandler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
 
-                            String searchedString = searchString.getText().toString();
-                            String firstPer = "%"+searchedString;
-                            String queryString = firstPer+"%";
+                                    String searchedString = searchString.getText().toString();
+                                    String firstPer = "%"+searchedString;
+                                    String queryString = firstPer+"%";
 
 
-                            if (searchString.getText().toString().length() < 1){
-                                //fetches default 5 most issued items if search box is empty, change values in fetchStockStable and here to update results number
-                                GetStockTable fetchDefaultStockTable = new GetStockTable(new GetStockTableListener() {
-                                    @Override
-                                    public void onTaskComplete(JSONArray jsonArray) {
-                                        //LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
-                                        //linearProgressIndicator.setVisibility(View.GONE);
-                                        Log.e("TASK ASYNC","TASK IS DONE");
-                                        Log.i("SearchTest", "Search string empty, showing default items");
-                                        Cursor cursorx = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM stockTable LIMIT 10",null);
-                                        while (cursorx.moveToNext()){
-                                            String id = cursorx.getString(cursorx.getColumnIndexOrThrow("id"));
-                                            String name = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductName"));
-                                            Integer quantity = cursorx.getInt(cursorx.getColumnIndexOrThrow("ProductQuantity"));
-                                            String store = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductStore"));
-                                            String location = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductLocation"));
-                                            String description = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductDesc"));
-                                            String unit = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductUnit"));
-
-                                            RetrievedStock retrievedStock = new RetrievedStock(id, name,description,quantity,store,location,unit);
-                                            fetchedStockTable.add(retrievedStock);
-                                        }
-
-                                        adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
+                                    if (searchString.getText().toString().length() < 1){
+                                        //fetches default 5 most issued items if search box is empty, change values in fetchStockStable and here to update results number
+                                        GetStockTable fetchDefaultStockTable = new GetStockTable(new GetStockTableListener() {
                                             @Override
-                                            public View getView(int position, View convertView, ViewGroup parent) {
-                                                View view = super.getView(position, convertView, parent);
+                                            public void onTaskComplete(JSONArray jsonArray) {
+                                                //LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.fetch_progress);
+                                                //linearProgressIndicator.setVisibility(View.GONE);
+                                                Log.e("TASK ASYNC","TASK IS DONE");
+                                                Log.i("SearchTest", "Search string empty, showing default items");
 
-                                                TextView store_location = view.findViewById(R.id.store_location);
-                                                TextView product_name = view.findViewById(R.id.product_name);
-                                                TextView product_quantity = view.findViewById(R.id.product_quantity);
-                                                TextView product_location = view.findViewById(R.id.product_location);
-                                                RetrievedStock retrievedStock = getItem(position);
-                                                product_name.setText(retrievedStock.getName());
-                                                product_name.setSelected(true);
-                                                store_location.setText(retrievedStock.getStore());
-                                                product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
-                                                product_location.setText(retrievedStock.getLocation());
+                                                DBHandler dbHandler = new DBHandler(getApplicationContext());
+                                                SQLiteDatabase db = dbHandler.getReadableDatabase();
 
-                                                return view;
+                                                Cursor cursorx = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, ImageAvailable FROM stockTable LIMIT 10",null);
+                                                while (cursorx.moveToNext()){
+                                                    String id = cursorx.getString(cursorx.getColumnIndexOrThrow("id"));
+                                                    String name = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductName"));
+                                                    Float quantity = cursorx.getFloat(cursorx.getColumnIndexOrThrow("ProductQuantity"));
+                                                    String store = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductStore"));
+                                                    String location = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductLocation"));
+                                                    String description = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductDesc"));
+                                                    String unit = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductUnit"));
+                                                    String imageAvailable = cursorx.getString(cursorx.getColumnIndexOrThrow("ImageAvailable"));
+
+                                                    RetrievedStock retrievedStock = new RetrievedStock(id, name,description,quantity,location,store,unit,null,imageAvailable);
+                                                    fetchedStockTable.add(retrievedStock);
+                                                }
+
+                                                adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
+                                                    @Override
+                                                    public View getView(int position, View convertView, ViewGroup parent) {
+                                                        View view = super.getView(position, convertView, parent);
+
+                                                        TextView store_location = view.findViewById(R.id.store_location);
+                                                        TextView product_name = view.findViewById(R.id.product_name);
+                                                        TextView product_quantity = view.findViewById(R.id.product_quantity);
+                                                        TextView product_location = view.findViewById(R.id.product_location);
+                                                        RetrievedStock retrievedStock = getItem(position);
+                                                        product_name.setText(retrievedStock.getName());
+                                                        product_name.setSelected(true);
+                                                        store_location.setText(retrievedStock.getStore());
+                                                        product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
+                                                        product_location.setText(retrievedStock.getLocation());
+
+                                                        return view;
+                                                    }
+                                                };
+
+                                                assert listView != null;
+                                                listView.setAdapter(adapter);
+                                                adapter.notifyDataSetChanged();
+                                                db.close();
+                                                dbHandler.close();
+
                                             }
-                                        };
+                                        }, "false");
+                                        fetchDefaultStockTable.execute();
 
-                                        assert listView != null;
-                                        listView.setAdapter(adapter);
-                                        adapter.notifyDataSetChanged();
+
+
+                                    } else {
+                                        DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+                                        dbHandler1.clearStockTable();
+
+                                        //if text box is not empty, this fetches 20 items matching the query
+                                        GetStockTable fetchUpdatedStockTable = new GetStockTable(new GetStockTableListener() {
+                                            @Override
+                                            public void onTaskComplete(JSONArray jsonArray) {
+
+                                                adapter.clear();
+                                                adapter.notifyDataSetChanged();
+                                                Log.i("SearchTest","Search string updated with "+searchedString);
+                                                SQLiteDatabase db = dbHandler1.getReadableDatabase();
+                                                Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit, ImageAvailable FROM stockTable WHERE productName LIKE '"+queryString+"' LIMIT 20",null);
+                                                while (cursor.moveToNext()){
+                                                    String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
+                                                    String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
+                                                    Log.e("Retrievedx",name);
+                                                    Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                                                    String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
+                                                    String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
+                                                    String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
+                                                    String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                                                    String imageAvailable = cursor.getString(cursor.getColumnIndexOrThrow("ImageAvailable"));
+
+                                                    RetrievedStock retrievedStock = new RetrievedStock(id, name,description,quantity,location,store,unit,null,imageAvailable);
+                                                    fetchedStockTable.add(retrievedStock);
+
+                                                }
+                                                adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
+                                                    @Override
+                                                    public View getView(int position, View convertView, ViewGroup parent) {
+                                                        View view = super.getView(position, convertView, parent);
+
+                                                        TextView store_location = view.findViewById(R.id.store_location);
+                                                        TextView product_name = view.findViewById(R.id.product_name);
+                                                        TextView product_quantity = view.findViewById(R.id.product_quantity);
+                                                        TextView product_location = view.findViewById(R.id.product_location);
+                                                        RetrievedStock retrievedStock = getItem(position);
+                                                        product_name.setText(retrievedStock.getName());
+                                                        product_name.setSelected(true);
+                                                        store_location.setText(retrievedStock.getStore());
+                                                        product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
+                                                        product_location.setText(retrievedStock.getLocation());
+
+                                                        return view;
+                                                    }
+                                                };
+
+                                                assert listView != null;
+                                                listView.setAdapter(adapter);
+
+                                                adapter.notifyDataSetChanged();
+
+                                            }
+                                        },searchedString);
+                                        fetchUpdatedStockTable.execute();
+
+                                        dbHandler1.close();
+
+
 
                                     }
-                                }, "false");
-                                fetchDefaultStockTable.execute();
 
-
-
-                            } else {
-                                DBHandler dbHandler1 = new DBHandler(getApplicationContext());
-                                dbHandler1.clearStockTable();
-
-                                //if text box is not empty, this fetches 20 items matching the query
-                                GetStockTable fetchUpdatedStockTable = new GetStockTable(new GetStockTableListener() {
-                                    @Override
-                                    public void onTaskComplete(JSONArray jsonArray) {
-
-                                        adapter.clear();
-                                        adapter.notifyDataSetChanged();
-                                        Log.i("SearchTest","Search string updated with "+searchedString);
-                                        Cursor cursor = db.rawQuery("SELECT id, productName, productQuantity, productStore, productlocation, productDesc, productUnit FROM stockTable WHERE productName LIKE '"+queryString+"' LIMIT 20",null);
-                                        while (cursor.moveToNext()){
-                                            String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
-                                            String name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-                                            Log.e("Retrievedx",name);
-                                            Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
-                                            String store = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
-                                            String location = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
-                                            String description = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
-                                            String unit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
-
-                                            RetrievedStock retrievedStock = new RetrievedStock(id, name,description,quantity,store,location,unit);
-                                            fetchedStockTable.add(retrievedStock);
-
-                                        }
-                                        adapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(), R.layout.add_item_list, R.id.product_name, fetchedStockTable) {
-                                            @Override
-                                            public View getView(int position, View convertView, ViewGroup parent) {
-                                                View view = super.getView(position, convertView, parent);
-
-                                                TextView store_location = view.findViewById(R.id.store_location);
-                                                TextView product_name = view.findViewById(R.id.product_name);
-                                                TextView product_quantity = view.findViewById(R.id.product_quantity);
-                                                TextView product_location = view.findViewById(R.id.product_location);
-                                                RetrievedStock retrievedStock = getItem(position);
-                                                product_name.setText(retrievedStock.getName());
-                                                product_name.setSelected(true);
-                                                store_location.setText(retrievedStock.getStore());
-                                                product_quantity.setText("Qty: "+String.valueOf(retrievedStock.getQuantity())+" "+retrievedStock.getUnit());
-                                                product_location.setText(retrievedStock.getLocation());
-
-                                                return view;
-                                            }
-                                        };
-
-                                        assert listView != null;
-                                        listView.setAdapter(adapter);
-
-                                        adapter.notifyDataSetChanged();
-
-                                    }
-                                },searchedString);
-                                fetchUpdatedStockTable.execute();
-
-                            }
+                                }
+                            });
                         }
-                    });
+                    }, FETCH_DELAY_TIME);
 
                 }
 
@@ -1041,6 +1149,8 @@ public class StockAdjustment extends AppCompatActivity {
 
 
             bottomSheetDialog.show();
+            dbHandler.close();
+            db.close();
 
         } else{
             Toast.makeText(this, "Select an adjustment type", Toast.LENGTH_SHORT).show();
@@ -1055,6 +1165,7 @@ public class StockAdjustment extends AppCompatActivity {
         DBHandler dbHandler1 = new DBHandler(getApplicationContext());
         dbHandler1.clearStockTable();
         showBottomSheet();
+        dbHandler1.close();
 
     }
 
@@ -1091,11 +1202,30 @@ public class StockAdjustment extends AppCompatActivity {
                         RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                         Request request = new Request.Builder()
                                 .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                                .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                                 .post(requestBody)
                                 .build();
                         Response response = okHttpClient.newCall(request).execute();
                         resString = response.body().string();
-                        JSONObject jsonObject = new JSONObject(resString);
+
+                        JSONObject jsonObject3 = new JSONObject(resString);
+
+                        String status1 = jsonObject3.optString("status");
+                        resString = jsonObject3.optString("data");
+
+                        TokenChecker tokenChecker = new TokenChecker();
+                        tokenChecker.checkToken(status1, getApplicationContext(), StockAdjustment.this);
+                        JSONObject jsonObject = null;
+
+                        try{
+                            jsonObject = new JSONObject(resString);
+                        } catch (Exception e){
+                            e.printStackTrace();
+                            confirmerConfirmed = false;
+                            blocktransaction = true;
+                        }
+
+
                         if(jsonObject.optString("status").equals("success")){
                             staffInt = jsonObject.optInt("userID");
                             confirmerName = jsonObject.optString("firstName")+" "+jsonObject.optString("lastName");
@@ -1162,6 +1292,8 @@ public class StockAdjustment extends AppCompatActivity {
                 Toast.makeText(StockAdjustment.this, "Could not get current user ID", Toast.LENGTH_SHORT).show();
             }
 
+            dbHandler1.close();
+
 
 
             return resString;
@@ -1200,10 +1332,20 @@ public class StockAdjustment extends AppCompatActivity {
                         try{
                             Request request = new Request.Builder()
                                     .url("https://"+dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/tst/getDateTime")
+                                    .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                                     //.post(requestBody)
                                     .build();
                             Response response = okHttpClient.newCall(request).execute();
                             String resString = response.body().string();
+
+                            JSONObject jsonObject3 = new JSONObject(resString);
+
+                            String status1 = jsonObject3.optString("status");
+                            resString = jsonObject3.optString("data");
+
+                            TokenChecker tokenChecker = new TokenChecker();
+                            tokenChecker.checkToken(status1, getApplicationContext(), StockAdjustment.this);
+
                             Log.i("Response",resString);
 
                             response.close();
@@ -1226,7 +1368,7 @@ public class StockAdjustment extends AppCompatActivity {
                         Log.e("RECEIVER DEPARTMENT",": "+receiver_dept);
 
                         dbHandler.addOngoingIssueMeta(new_id, dbHandler.getIssuerID(),issuer_name,staffInt,confirmerName,null,new_date,new_time);
-                        dbHandler.updateOngoingIssueTable(new_id, dbHandler.getIssuerID(),issuer_name,staffInt,confirmerName,null,new_date,new_time,null);
+                        dbHandler.updateOngoingIssueTable(new_id, dbHandler.getIssuerID(),issuer_name,staffInt,confirmerName,null,new_date,new_time,null,null);
 
 
                     } catch (Exception e) {
@@ -1246,7 +1388,7 @@ public class StockAdjustment extends AppCompatActivity {
                                 intent.putExtra("staffName","Staff Name:");
                                 intent.putExtra("returnerDept","");
                                 intent.putExtra("type","Adjustment");
-                                intent.putExtra("returnerName","Confirmer:");
+                                intent.putExtra("returnerName","Confirmed By:");
                                 if(isAdd){
                                     intent.putExtra("itemsReturned","Items Added");
                                     intent.putExtra("title","Adjust Stock (Addition)");
@@ -1255,7 +1397,10 @@ public class StockAdjustment extends AppCompatActivity {
                                     intent.putExtra("title","Adjust Stock (Deduction)");
                                 }
 
+                                bsbottomSheetDialog.dismiss();
+                                mIsCardReaderOpen = false;
                                 startActivity(intent);
+                                finish();
 
                                                             /*
                                                             SyncHistoryTask syncHistoryTask = new SyncHistoryTask(new SyncHistoryTaskListener() {
@@ -1287,8 +1432,11 @@ public class StockAdjustment extends AppCompatActivity {
 
                 }
 
+                dbHandler.close();
+
 
             }
+
         }
     }
 
@@ -1311,32 +1459,29 @@ public class StockAdjustment extends AppCompatActivity {
             SQLiteDatabase db = dbHandler.openDatabase(getApplicationContext());
             String message = null;
             String responsex = null;
+            JSONArray rowData = new JSONArray();
             //Cursor cursor = db.rawQuery("SELECT id, ProductQuantity, ProductName FROM ongoingIssueTable",null);
 
             try {
 
                 Cursor cursorx = db.rawQuery("SELECT * FROM ongoingIssueTable",null);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        //Toast.makeText(StockAdjustment.this, "Syncing "+String.valueOf(cursorx.getCount())+" items", Toast.LENGTH_SHORT).show();
+
+                    }
+                });
 
                 while (cursorx.moveToNext()){
 
-                    Integer idx = cursorx.getInt(cursorx.getColumnIndexOrThrow("id"));
-                    localquantity = cursorx.getInt(cursorx.getColumnIndexOrThrow("ProductQuantity"));
+                    String idx = cursorx.getString(cursorx.getColumnIndexOrThrow("id"));
+                    localquantity = cursorx.getFloat(cursorx.getColumnIndexOrThrow("ProductQuantity"));
                     localname = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductName"));
 
                     //values for history syncing
                     Integer TransactionID = cursorx.getInt(cursorx.getColumnIndexOrThrow("TransactionID"));
-                    Integer ProductQuantity = cursorx.getInt(cursorx.getColumnIndexOrThrow("ProductQuantity"));
-
-                    /*
-                    String sqlx = "SELECT productQuantity FROM stockTable WHERE id ='"+id+"'";
-                    PreparedStatement statementx = connection.prepareStatement(sqlx);
-                    ResultSet resultSetx = statementx.executeQuery();
-                    while (resultSetx.next()){
-                        Integer fetchedQTY = resultSetx.getInt("productQuantity");
-                        balance = String.valueOf(fetchedQTY);
-                        Log.e("Balance","FetchedQTY "+String.valueOf(fetchedQTY));
-                    }
-                    */
+                    Float ProductQuantity = cursorx.getFloat(cursorx.getColumnIndexOrThrow("ProductQuantity"));
 
 
                     String ProductName = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductName"));
@@ -1350,38 +1495,56 @@ public class StockAdjustment extends AppCompatActivity {
                     String TransactionDate = cursorx.getString(cursorx.getColumnIndexOrThrow("TransactionDate"));
                     String TransactionTime = cursorx.getString(cursorx.getColumnIndexOrThrow("TransactionTime"));
                     String unit = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductUnit"));
+                    String additionID = cursorx.getString(cursorx.getColumnIndexOrThrow("AdditionID"));
+
 
                     String getDBQuantitySQl = "{\"type\":\"sync_adjustment\",\"condition\":\"compare_quantity\",\"id\":\""+idx+"\"}";
 
 
                     try{
 
+                        //migrate to one api call
+
                         RequestBody requestBody =  RequestBody.create(getDBQuantitySQl, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                         Request request = new Request.Builder()
                                 .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
+                                .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                                 .post(requestBody)
                                 .build();
                         Response response = okHttpClient.newCall(request).execute();
                         String resString = response.body().string();
 
+                        JSONObject jsonObject3 = new JSONObject(resString);
+
+                        String status1 = jsonObject3.optString("status");
+                        resString = jsonObject3.optString("data");
+
+                        TokenChecker tokenChecker = new TokenChecker();
+                        tokenChecker.checkToken(status1, getApplicationContext(), StockAdjustment.this);
+
                         JSONObject jsonObjectProductQuantity = new JSONObject(resString);
 
-                        dbquantity = jsonObjectProductQuantity.getInt("productQuantity");
+                        dbquantity = (float)jsonObjectProductQuantity.getDouble("productQuantity");
                         Log.i("QTY", "DB QUANTITY = "+String.valueOf(dbquantity));
                         Log.i("QTY", "LOCAL QUANTITY = "+String.valueOf(localquantity));
                         response.close();
+                        String AdditionType = null;
 
                         if(isAdd){
                             new_quantity = dbquantity+localquantity;
+                            AdditionType = "Stock Addition";
                         } else {
                             new_quantity = dbquantity-localquantity;
+                            AdditionType = "Stock Deduction";
                         }
+
                         Log.i("QTY", "NEW QUANTITY = "+String.valueOf(new_quantity));
                         Integer updatedID = new_id;
 
-                        String sql3 = "{\"type\":\"sync_adjustment\",\"condition\":\"update_quantity\",\"id\":\""+idx+"\",\"new_quantity\":\""+new_quantity+"\",\"new_lastID\":\""+updatedID+"\"}";
-
+                        //String sql3 = "{\"type\":\"sync_adjustment\",\"condition\":\"update_quantity\",\"id\":\""+idx+"\",\"new_quantity\":\""+new_quantity+"\",\"new_lastID\":\""+updatedID+"\"}";
                         try{
+
+                            /*
 
                             RequestBody requestBody1 =  RequestBody.create(sql3, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                             Request request1 = new Request.Builder()
@@ -1391,53 +1554,38 @@ public class StockAdjustment extends AppCompatActivity {
                             Response response1= okHttpClient.newCall(request1).execute();
                             String resString1 = response1.body().string();
                             jsonObjectProductQuantity = new JSONObject(resString1);
-
                             message = jsonObjectProductQuantity.optString("status");
+
                             Log.i("Message", message);
-                            String AdditionType = null;
 
-                            if(isAdd){
-                                AdditionType = "Stock Addition";
+                             */
 
+                            String isLast = "false";
+                            String isFirst = "false";
 
-                                //sql = "INSERT INTO adjustmentHistoryTable (`TransactionID`, `id`, `ProductName`, `ProductDesc`, `QuantityAdded`, `ProductStore`, `ProductLocation`, `StaffID`, `StaffName`, `ConfirmerID`, `ConfirmerName`, `TransactionDate`, `TransactionTime`, `Balance`, `ProductUnit`, `TransactionType`) VALUES ('"+TransactionID+"','"+id+"', '"+ProductName+"', '"+ProductDesc+"', '"+ProductQuantity+"', '"+ProductStore+"', '"+ProductLocation+"', '"+IssuerID+"', '"+IssuerName+"','"+staffInt+"', '"+ReceiverName+"', '"+TransactionDate+"', '"+TransactionTime+"','"+balance+"','"+unit+"','"+AdditionType+"');";
-
-                            } else{
-                                AdditionType = "Stock Deduction";
-                                //sql = "INSERT INTO adjustmentHistoryTable (`TransactionID`, `id`, `ProductName`, `ProductDesc`, `QuantityDeducted`, `ProductStore`, `ProductLocation`, `StaffID`, `StaffName`, `ConfirmerID`, `ConfirmerName`, `TransactionDate`, `TransactionTime`, `Balance`, `ProductUnit`, `TransactionType`) VALUES ('"+TransactionID+"','"+id+"', '"+ProductName+"', '"+ProductDesc+"', '"+ProductQuantity+"', '"+ProductStore+"', '"+ProductLocation+"', '"+IssuerID+"', '"+IssuerName+"','"+staffInt+"', '"+ReceiverName+"', '"+TransactionDate+"', '"+TransactionTime+"','"+balance+"','"+unit+"','"+AdditionType+"');";
-
+                            if (cursorx.isLast()){
+                                isLast = "true";
+                            } else {
+                                isLast = "false";
                             }
 
-
-                            String historysql = "{\"type\":\"sync_adjustment\",\"condition\":\"sync_history\",\"TransactionType\":\""+AdditionType+"\",\"TransactionID\":\""+TransactionID+"\",\"id\":\""+idx+"\",\"ProductName\":\""+ProductName+"\",\"ProductDesc\":\""+ProductDesc+"\",\"Quantity\":\""+ProductQuantity+"\",\"ProductStore\":\""+ProductStore+"\",\"ProductLocation\":\""+ProductLocation+"\",\"StaffID\":\""+IssuerID+"\",\"StaffName\":\""+IssuerName+"\",\"ConfirmerID\":\""+staffInt+"\",\"ConfirmerName\":\""+ReceiverName+"\",\"TransactionDate\":\""+TransactionDate+"\",\"TransactionTime\":\""+TransactionTime+"\",\"Balance\":\""+new_quantity+"\",\"ProductUnit\":\""+unit+"\"}";
-
-                            try{
-                                RequestBody requestBodyx =  RequestBody.create(historysql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
-                                Request requestx = new Request.Builder()
-                                        .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
-                                        .post(requestBodyx)
-                                        .build();
-                                Response responsey = okHttpClient.newCall(requestx).execute();
-                                String resStringx = responsey.body().string();
-
-                                try{
-                                    JSONObject jsonObject = new JSONObject(resStringx);
-                                    responsex = jsonObject.optString("status");
-                                    if (responsex.equals("success")){
-                                        blocktransaction = false;
-                                    }
-                                } catch (Exception e){
-                                    e.printStackTrace();
-                                    responsex = "failed";
-                                    blocktransaction = true;
-                                }
-
-                                responsey.close();
-
-                            } catch (Exception e){
-                                e.printStackTrace();
-
+                            if (cursorx.isFirst()){
+                                isFirst = "true";
+                            } else {
+                                isFirst = "false";
                             }
+
+                            EditText adjustmentReason = findViewById(R.id.adjustmentReason);
+                            String reason = adjustmentReason.getText().toString();
+                            String historysql = "{\"isFirst\":\""+isFirst+"\",\"isLast\":\""+isLast+"\",\"new_quantity\":\""+new_quantity+"\",\"new_lastID\":\""+updatedID+"\",\"additionID\":\""+additionID+"\",\"reason\":\""+reason+"\",\"type\":\"sync_adjustment\",\"condition\":\"sync_history\",\"TransactionType\":\""+AdditionType+"\",\"TransactionID\":\""+TransactionID+"\",\"id\":\""+idx+"\",\"ProductName\":\""+ProductName+"\",\"ProductDesc\":\""+ProductDesc+"\",\"Quantity\":\""+ProductQuantity+"\",\"ProductStore\":\""+ProductStore+"\",\"ProductLocation\":\""+ProductLocation+"\",\"StaffID\":\""+IssuerID+"\",\"StaffName\":\""+IssuerName+"\",\"ConfirmerID\":\""+staffInt+"\",\"ConfirmerName\":\""+ReceiverName+"\",\"TransactionDate\":\""+TransactionDate+"\",\"TransactionTime\":\""+TransactionTime+"\",\"Balance\":\""+new_quantity+"\",\"ProductUnit\":\""+unit+"\"}";
+                            Log.d("Adjustment SQL", historysql);
+
+                            rowData.put(new JSONObject(historysql));
+
+                            /*
+
+
+                            */
 
 
                         } catch (Exception e){
@@ -1452,11 +1600,109 @@ public class StockAdjustment extends AppCompatActivity {
                     }
                 }
 
+                //send sql string to api and wait for results.
+                String data = "{\"type\":\"sync_adjustment\",\"condition\":\"sync_history\",\"data\":"+rowData.toString()+"}";
+                Log.d("ROW DATA", rowData.toString());
+                try{
+
+                    RequestBody requestBodyx =  RequestBody.create(data, okhttp3.MediaType.parse("application/json; charset=utf-8"));
+                    Request requestx = new Request.Builder()
+                            .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
+                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
+                            .post(requestBodyx)
+                            .build();
+                    Response responsey = okHttpClient.newCall(requestx).execute();
+                    String resStringx = responsey.body().string();
+                    Log.e("RESPONSE", resStringx);
+
+                    JSONObject jsonObject3 = new JSONObject(resStringx);
+
+                    String status2 = jsonObject3.optString("status");
+                    resStringx = jsonObject3.optString("data");
+
+                    TokenChecker tokenChecker = new TokenChecker();
+                    tokenChecker.checkToken(status2, getApplicationContext(), StockAdjustment.this);
+
+                    TextView adjustmentStatusText = findViewById(R.id.adjustmentStatusText);
+
+                    try{
+                        JSONObject jsonObject = new JSONObject(resStringx);
+                        responsex = jsonObject.optString("status");
+                        if (responsex.equals("success")){
+                            blocktransaction = false;
+                        } else if (responsex.equals("failedx")) {
+                            blocktransaction = true;
+
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(StockAdjustment.this, String.valueOf(jsonObject.optString("message")), Toast.LENGTH_SHORT).show();
+                                    adjustmentStatusText.setText(jsonObject.optString("message")+" No data was synced");
+                                    adjustmentStatusText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+                                    cursorx.close();
+                                    db.close();
+
+
+                                    new Handler().postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            adjustmentStatusText.setText("");
+
+                                        }
+                                    }, 8000);
+
+                                }
+                            });
+
+                        }
+                    } catch (Exception e){
+                        e.printStackTrace();
+                        responsex = "failed";
+                        blocktransaction = true;
+                    }
+
+                    responsey.close();
+
+                } catch (Exception e){
+                    e.printStackTrace();
+
+                }
+
+                cursorx.close();
 
             } catch (Exception e) {
                 Log.e("SYNC ADJUSTMENT HISTORY TASK", "Error syncing history", e);
 
             }
+
+            try{
+                if (!responsex.equals("success")) {
+                    blocktransaction = true;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            TextView adjustmentStatusText = findViewById(R.id.adjustmentStatusText);
+                            Toast.makeText(StockAdjustment.this, "An error occured", Toast.LENGTH_SHORT).show();
+                            adjustmentStatusText.setText("An error occured \n " + " No data was synced");
+                            adjustmentStatusText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+
+                            db.close();
+
+                            //ongoingListview.getChildAt(0).setBackgroundColor(Color.RED);
+                        }
+                    });
+
+                }
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+
+
+
+
+            dbHandler.close();
+            db.close();
             return null;
         }
 
@@ -1505,10 +1751,19 @@ public class StockAdjustment extends AppCompatActivity {
                     RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                     Request request = new Request.Builder()
                             .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                             .post(requestBody)
                             .build();
                     Response response = okHttpClient.newCall(request).execute();
                     String resString = response.body().string();
+
+                    JSONObject jsonObject3 = new JSONObject(resString);
+
+                    String status1 = jsonObject3.optString("status");
+                    resString = jsonObject3.optString("data");
+
+                    TokenChecker tokenChecker = new TokenChecker();
+                    tokenChecker.checkToken(status1, getApplicationContext(), StockAdjustment.this);
 
                     jsonArray = new JSONArray(resString);
 
@@ -1524,6 +1779,7 @@ public class StockAdjustment extends AppCompatActivity {
                 Log.e("STOCK ADD FAILED", "Error adding stock", e);
 
             }
+            dbHandler1.close();
 
             return jsonArray;
 
@@ -1533,29 +1789,42 @@ public class StockAdjustment extends AppCompatActivity {
         protected void onPostExecute(JSONArray jsonArray) {
             super.onPostExecute(jsonArray);
             if (listener != null) {
+                DBHandler dbHandler1 = new DBHandler(getApplicationContext());
 
                 try {
 
-                    DBHandler dbHandler1 = new DBHandler(getApplicationContext());
+
                     for (int i = 0; i < jsonArray.length(); i++) {
+
                         JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                        String itemCode = jsonObject.optString("itemCode");
-                        String productName = jsonObject.getString("productName");
+                        Log.d("JSON", jsonObject.toString());
 
-                        String productDesc = jsonObject.getString("productDesc");
-                        int productQuantity = jsonObject.getInt("productQuantity");
-                        String productStore = jsonObject.getString("productStore");
-                        String productLocation = jsonObject.getString("productLocation");
-                        String productUnit = jsonObject.getString("productUnit");
-                        dbHandler1.syncStockTable(itemCode,productName,productDesc,productQuantity,productStore,productLocation,productUnit);
+                        String itemCode = jsonObject.optString("itemCode");
+                        String productName = jsonObject.optString("productName");
+
+                        String productDesc = jsonObject.optString("productDesc");
+                        double productQuantity = jsonObject.optDouble("productQuantity");
+                        String productStore = jsonObject.optString("productStore");
+                        String productLocation = jsonObject.optString("productLocation");
+                        String productUnit = jsonObject.optString("productUnit");
+                        String imageAvailable = jsonObject.optString("imageAvailable");
+
+                        ItemLocationParser itemLocationParser = new ItemLocationParser();
+                        String[] parsedLocation = itemLocationParser.parseLocation(productLocation);
+                        productStore = parsedLocation[0];
+                        productLocation = parsedLocation[1];
+
+                        dbHandler1.syncStockTable(itemCode,productName,productDesc,(float) productQuantity,productStore,productLocation,productUnit,imageAvailable);
 
                     }
+
+
 
                 } catch (Exception e){
                     e.printStackTrace();
                 }
-
+                dbHandler1.close();
                 listener.onTaskComplete(jsonArray);
 
             }
@@ -1563,6 +1832,7 @@ public class StockAdjustment extends AppCompatActivity {
         }
     }
 
+    /*
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -1698,12 +1968,185 @@ public class StockAdjustment extends AppCompatActivity {
         }
     }
 
+     */
+
+    private class CardReading extends AsyncTask<Object, Boolean, Boolean> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            //bottomSheetDialog.show();
+            //Functions.Show_loader(MainActivity.this, false, false);
+        }
+
+        @Override
+        protected Boolean doInBackground(Object... objects) {
+
+            String mAPDUcustom = "FF"  // MiFare Card
+                    + "CA"                              // MiFare Card READ Command
+                    + "00"                              // P1 or "FF"
+                    + "00"                              // P2: Block Number
+                    + "00";                             // Number of bytes to read
+
+            readCardAsync(mAPDUcustom);
+
+
+            return true;
+        }
+
+        protected void onPostExecute() {
+            //Functions.cancel_loader();
+            //bottomSheetDialog.dismiss();
+
+        }
+
+    }
+
+    private void readCardAsync (String APDUcommand){
+        App.BioManager.cardCommand(new ApduCommand(APDUcommand), false, (Biometrics.ResultCode resultcode, byte sw1, byte sw2, byte[] data) ->{
+            if(OK == resultcode){
+                //Toast.makeText(this, "sw1="+sw1, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "sw1="+sw2, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "data="+ Arrays.toString(data), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "HexString="+bytesToHexString(data), Toast.LENGTH_SHORT).show();
+                BigInteger uidInt = new BigInteger(bytesToHexString(data), 16);
+                //Toast.makeText(this, "Integer Value: "+String.valueOf(uidInt), Toast.LENGTH_LONG).show();
+                if(mIsCardReaderOpen){
+                    new StockAdjustment.VerifyStaffTask(new StockAdjustment.VerifyStaffTaskListener() {
+                        @Override
+                        public void onTaskComplete(String response) {
+                            Log.i("Response",response);
+                        }
+                    }, String.valueOf(uidInt)).execute();
+                }
+
+                //verifyAccessCard(uidInt);
+            } else if (INTERMEDIATE == resultcode) {
+                Toast.makeText(this, "INTERMEDIATE", Toast.LENGTH_SHORT).show();
+            } else if (FAIL == resultcode) {
+                Toast.makeText(this, "FAILED.. \n Did you hold card on reader?", Toast.LENGTH_SHORT).show();
+            }
+
+        });
+    }
+
+    private class OpenCardReaderAsync extends AsyncTask<Object, Boolean, Boolean> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            //Functions.Show_loader(MainActivity.this, false, true);
+//            Functions.fetchAndSaveUsers(LoginActivity.this);
+        }
+
+        @Override
+        protected Boolean doInBackground(Object... objects) {
+            if(mIsCardReaderOpen == true){
+                openCardReader();
+            }
+
+            return true;
+        }
+
+        protected void onPostExecute() {
+            //bottomSheetDialog.dismiss();
+            //App.BioManager.cardCloseCommand();
+            //App.BioManager.cardDisconnectSync(1);
+            //Functions.cancel_loader();
+            //Functions.arrangeFingers(finger_1,finger_2,finger_3,finger_4,cardDetails.getGhanaIdCardFpTemplateInfosList());
+
+        }
+
+    }
+
+    public void openCardReaderMain() {
+        //  SharedPreferences.Editor editor = Functions.getEditor(LoginActivity.this);
+        App.BioManager.cardOpenCommand(new Biometrics.CardReaderStatusListener() {
+            @Override
+            public void onCardReaderOpen(Biometrics.ResultCode resultCode) {
+                if (resultCode == Biometrics.ResultCode.OK) {
+                    //mIsCardReaderOpen = true;
+                    onCardStatusListener = new Biometrics.OnCardStatusListener() {
+                        @Override
+                        public void onCardStatusChange(String s, int prevState, int currentState) {
+                            if (Variables.CARD_ABSENT == currentState) {
+                                //Functions.Show_Alert2(MainActivity.this, "CARD ABSENT", "Place Card on top on the device");
+                            } else {
+                                Variables.mIsDocPresentOnEPassport = true;
+                                //Functions.hide_Alert2();
+
+                                //Toast.makeText(MainActivity.this, "CARD DETECTED", Toast.LENGTH_SHORT).show();
+                                new StockAdjustment.CardReading().execute();
+
+                            }
+                        }
+                    };
+
+                    App.BioManager.registerCardStatusListener(onCardStatusListener);
+                    Functions.cancel_loader();
+                } else {
+                    Functions.cancel_loader();
+                    Functions.Show_Alert2(StockAdjustment.this, "Card Opening Error", "Error Opening Card Reader" + resultCode.toString());
+                }
+            }
+
+            @Override
+            public void onCardReaderClosed(Biometrics.ResultCode resultCode, Biometrics.CloseReasonCode closeReasonCode) {
+                Functions.cancel_loader();
+//                editor.putBoolean(Variables.is_card_reader_open, false);
+//                editor.commit();
+//                loginNotification.setText(Variables.restart_app);
+//                btnLogin.setEnabled(false);
+                //Functions.Show_Alert(LoginActivity.this,"Card Closed","Error Opening Card Reader");
+            }
+        });
+    }
+
+    private void openCardReader() {
+        boolean isCardReaderOpened = Functions.getSharedPreference(StockAdjustment.this).getBoolean(Variables.is_card_reader_open, false);
+
+        if (isCardReaderOpened == false) {
+            openCardReaderMain();
+        } else {
+            boolean cardConnection = App.BioManager.cardConnectSync(1000);
+            if (cardConnection) {
+                onCardStatusListener = new Biometrics.OnCardStatusListener() {
+                    @Override
+                    public void onCardStatusChange(String s, int prevState, int currentState) {
+                        if (Variables.CARD_ABSENT == currentState) {
+                            Functions.Show_Alert2(StockAdjustment.this, "CARD ABSENT", "Place Card on top on the device");
+
+                        } else {
+                            Variables.mIsDocPresentOnEPassport = true;
+                            Functions.hide_Alert2();
+
+                        }
+                    }
+                };
+                App.BioManager.registerCardStatusListener(onCardStatusListener);
+                Functions.cancel_loader();
+            } else {
+                openCardReaderMain();
+            }
+        }
+
+
+    }
+
+
+
     private String bytesToHexString ( byte[] bytes){
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
             sb.append(String.format("%02X", b));
         }
         return sb.toString();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        DBHandler dbHandler = new DBHandler(getApplicationContext());
+        dbHandler.clearOngoingIssueTable();
     }
 
 

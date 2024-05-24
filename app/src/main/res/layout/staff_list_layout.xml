@@ -40,7 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Staff Name"
-                android:fontFamily="@font/sfprodisplaybold"
+                android:fontFamily="@font/poppins_bold"
                 app:layout_constraintStart_toEndOf="@id/staff_icon"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -53,7 +53,7 @@
                 android:layout_height="wrap_content"
                 android:text="Staff Type"
                 android:textSize="12sp"
-                android:fontFamily="@font/sfprodisplayregular"
+                android:fontFamily="@font/poppins_regular"
                 app:layout_constraintTop_toBottomOf="@id/staff_name"
                 app:layout_constraintStart_toEndOf="@id/staff_icon"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -70,7 +70,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 android:layout_marginEnd="20dp"
                 android:layout_marginBottom="10dp"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 android:textColor="#49454f"
                 android:textSize="13sp"/>
 

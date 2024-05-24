@@ -63,7 +63,21 @@ public class SplashScreen extends AppCompatActivity {
 
         } else {
 
+
             try{
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        linearProgressIndicator = findViewById(R.id.splash_progress);
+                        linearProgressIndicator.setVisibility(View.VISIBLE);
+                        ImageView imageView = findViewById(R.id.logo);
+                        imageView.setVisibility(View.VISIBLE);
+
+                    }
+                });
+                initializeBiometrics();
+                requestPermissions();
+
                 fromClassName = getIntent().getStringExtra("fromClassName");
 
                 if (fromClassName != null){
@@ -79,26 +93,20 @@ public class SplashScreen extends AppCompatActivity {
 
                             }
                         });
-                        initializeBiometrics();
-                        requestPermissions();
+                        //initializeBiometrics();
+                        //requestPermissions();
 
 
                     }
 
                 } else{
-                    Intent intent = new Intent(SplashScreen.this, HomePage.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    startActivity(intent);
+                    
                 }
 
             } catch (Exception e){
                 e.printStackTrace();
             }
-
-
         }
-
-
 
     }
 
@@ -112,24 +120,38 @@ public class SplashScreen extends AppCompatActivity {
             }
 
             public void onFinish() {
-                Intent intent;
-                //intent = new Intent(SplashScreen.this, BiometricLogin.class);
-                intent = new Intent(SplashScreen.this, MainActivity.class);
-                if(canNumber != null){
-                    intent.putExtra("canNumber",canNumber);
-                    intent.putExtra("name",getIntent().getStringExtra("name"));
-                    intent.putExtra("fromClassName",fromClassName);
-                    intent.putExtra("new_id",getIntent().getStringExtra("new_id"));
-                    intent.putExtra("bookNumber",getIntent().getStringExtra("bookNumber"));
-                    intent.putExtra("issuer_name",getIntent().getStringExtra("issuer_name"));
-                    intent.putExtra("staffID",getIntent().getStringExtra("staffID"));
-                    intent.putExtra("receiver_full_name",getIntent().getStringExtra("receiver_full_name"));
-                    intent.putExtra("receiver_dept",getIntent().getStringExtra("receiver_dept"));
+                MyPrefs myPrefs = new MyPrefs();
+                if (myPrefs.getLoginStatus(getApplicationContext())){
+                    Intent intent = new Intent(SplashScreen.this, HomePage.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+
+                    Toast.makeText(SplashScreen.this, "Signed in", Toast.LENGTH_SHORT).show();
+
+                } else {
+                    Toast.makeText(SplashScreen.this, "Please sign in", Toast.LENGTH_SHORT).show();
+
+                    Intent intent;
+                    //intent = new Intent(SplashScreen.this, BiometricLogin.class);
+                    intent = new Intent(SplashScreen.this, MainActivity.class);
+                    if(canNumber != null){
+                        intent.putExtra("canNumber",canNumber);
+                        intent.putExtra("name",getIntent().getStringExtra("name"));
+                        intent.putExtra("fromClassName",fromClassName);
+                        intent.putExtra("new_id",getIntent().getStringExtra("new_id"));
+                        intent.putExtra("bookNumber",getIntent().getStringExtra("bookNumber"));
+                        intent.putExtra("issuer_name",getIntent().getStringExtra("issuer_name"));
+                        intent.putExtra("staffID",getIntent().getStringExtra("staffID"));
+                        intent.putExtra("receiver_full_name",getIntent().getStringExtra("receiver_full_name"));
+                        intent.putExtra("receiver_dept",getIntent().getStringExtra("receiver_dept"));
+
+                    }
+                    startActivity(intent);
+                    overridePendingTransition(R.anim.in_from_right, R.anim.fade_in);
+                    finish();
+
 
                 }
-                startActivity(intent);
-                overridePendingTransition(R.anim.in_from_right, R.anim.fade_in);
-                finish();
 
             }
         }.start();

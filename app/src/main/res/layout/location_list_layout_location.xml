@@ -40,7 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Location Name"
-                android:fontFamily="@font/sfprodisplaybold"
+                android:fontFamily="@font/poppins_bold"
                 app:layout_constraintStart_toEndOf="@id/store_icon"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"

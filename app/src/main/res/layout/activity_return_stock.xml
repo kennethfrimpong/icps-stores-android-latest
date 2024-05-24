@@ -36,6 +36,7 @@
             android:contentDescription="Account Icon"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -44,7 +45,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Return Stock"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
@@ -55,7 +56,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="65dp"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         android:text="as First Last"
         android:textColor="#7a7a7a"
         tools:ignore="TextContrastCheck" />
@@ -64,7 +65,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Staff Info"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
         android:layout_marginTop="10dp"
@@ -90,8 +91,8 @@
             android:layout_height="wrap_content"
             android:paddingTop="15dp"
             android:paddingBottom="15dp"
-            android:fontFamily="@font/sfprodisplaymedium"
-            android:inputType="text"
+            android:fontFamily="@font/poppins_medium"
+            android:inputType="textNoSuggestions"
             android:textColor="@color/black"
             android:textColorHint="@color/black" />
 
@@ -101,7 +102,7 @@
                     android:id="@+id/receiver_name"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/sfprodisplaymedium"
+                    android:fontFamily="@font/poppins_medium"
                     android:inputType="text"
                     android:textColor="@color/black"
                     android:textColorHint="@color/black"/>
@@ -126,7 +127,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Remove"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         android:layout_gravity="end"
         android:textColor="@color/icps_red"
         android:layout_marginEnd="20dp"
@@ -134,7 +135,83 @@
         android:clickable="true"
         android:visibility="gone"/>
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/book_number_layout"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_width="185dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="7dp"
+            android:hint="Book Number"
+            app:boxBackgroundColor="@color/white"
+            app:boxStrokeColor="@color/black"
+            app:placeholderTextColor="@color/black"
+            app:startIconDrawable="@drawable/baseline_123_24"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/book_number"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/poppins_medium"
+                android:maxLength="7"
+                android:inputType="number"
+                android:textColor="@color/black"
+                android:textColorHint="@color/black"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/job_number_layout"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_width="185dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="7dp"
+            android:hint="Job Number"
+            app:boxBackgroundColor="@color/white"
+            app:boxStrokeColor="@color/black"
+            app:placeholderTextColor="@color/black"
+            app:startIconDrawable="@drawable/baseline_123_24"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/job_number"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/poppins_medium"
+                android:maxLength="10"
+                android:inputType="number"
+                android:textColor="@color/black"
+                android:textColorHint="@color/black"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:id="@+id/returnStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:textAlignment="center"
+        android:text=""
+        android:fontFamily="@font/poppins_medium"
+        android:textSize="12sp"
+        android:textColor="#B71C1C"
+        android:layout_marginTop="5dp"
+        android:layout_gravity="center"/>
+
+    <!--
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
@@ -153,20 +230,22 @@
             android:id="@+id/book_number"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:maxLength="7"
             android:inputType="number"
             android:textColor="@color/black"
             android:textColorHint="@color/black"/>
     </com.google.android.material.textfield.TextInputLayout>
+
+    -->
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Items"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:textSize="25sp"
         android:textColor="#3f3f3f"
-        android:layout_marginTop="10dp"
         android:layout_marginStart="20dp"/>
 
 
@@ -206,7 +285,7 @@
                 android:text="No item added yet"
                 android:textSize="16sp"
                 android:textColor="#7a7a7a"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 android:layout_gravity="center_horizontal"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -229,7 +308,7 @@
                 android:textSize="13sp"
                 android:text="Add item"
                 android:textAllCaps="false"
-                android:fontFamily="@font/sfprodisplaymedium"
+                android:fontFamily="@font/poppins_medium"
                 app:cornerRadius="20sp"
                 android:onClick="add_item"
                 app:layout_constraintTop_toBottomOf="@id/ongoing_item_list"
@@ -253,7 +332,7 @@
         app:iconSize="20dp"
         android:text="Return"
         android:textAllCaps="false"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         app:cornerRadius="20sp"
         android:onClick="return_stock"
         android:layout_marginTop="5dp"

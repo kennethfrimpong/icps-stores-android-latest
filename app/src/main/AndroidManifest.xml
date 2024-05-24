@@ -37,29 +37,42 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
-            android:name=".CardReadTest"
+            android:name=".AddImages"
             android:exported="false" />
 
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.icpsltd.stores.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+
+            <!-- ressource file to create -->
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+
+        <activity
+            android:name=".CaptureImage"
+            android:exported="false" />
+        <activity
+            android:name=".CardReadTest"
+            android:exported="false" />
         <activity
             android:name=".activities.AddStaff"
             android:exported="false" />
-
         <activity
             android:name=".biometricactivities.SplashScreen"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
-
         <activity
             android:name=".biometricactivities.FingerPrint"
             android:exported="false" />
-
         <activity
             android:name=".biometricactivities.BiometricLogin"
             android:exported="true">

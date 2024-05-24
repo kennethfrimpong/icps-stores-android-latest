@@ -1,5 +1,7 @@
 package com.icpsltd.stores.activities;
 
+import static com.icpsltd.stores.activities.NewIssue.FETCH_DELAY_TIME;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatSpinner;
@@ -13,7 +15,11 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -27,15 +33,21 @@ import android.widget.Toast;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.mlkit.vision.barcode.BarcodeScanner;
 
+import com.icpsltd.stores.adapterclasses.RetrievedStaff;
+import com.icpsltd.stores.adapterclasses.RetrievedStock;
 import com.icpsltd.stores.utils.DBHandler;
 import com.icpsltd.stores.R;
 import com.icpsltd.stores.adapterclasses.RetrievedLocation;
 import com.icpsltd.stores.adapterclasses.RetrievedProductMain;
 import com.icpsltd.stores.adapterclasses.RetrievedStore;
+import com.icpsltd.stores.utils.ItemLocationParser;
+import com.icpsltd.stores.utils.MyPrefs;
 import com.icpsltd.stores.utils.StockTable;
+import com.icpsltd.stores.utils.TokenChecker;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -70,7 +82,7 @@ public class QueryByProduct extends AppCompatActivity {
 
 
     private BarcodeScanner scanner1;
-    private TextInputEditText productCode;
+    private MaterialAutoCompleteTextView productCode;
     private String qrCodeString;
 
     private String enteredItemCode;
@@ -116,16 +128,9 @@ public class QueryByProduct extends AppCompatActivity {
     private String selectedLocationID;
     private String retrieved_store_id;
     private String retrieved_location_id;
-    private Integer productID;
+    private String productID;
     private String product_name;
-    private String fromStoreID;
-    private String fromStoreName;
-    private String fromLocationID;
-    private String fromLocationName;
-    private String toStoreID;
-    private String toStoreName;
-    private String toLocationID;
-    private String toLocationName;
+
     private String staffID;
     private String staffName;
 
@@ -137,6 +142,28 @@ public class QueryByProduct extends AppCompatActivity {
     private String moveTime;
 
     private OkHttpClient okHttpClient;
+
+    List<RetrievedStock> fetchedStock;
+
+    private MyPrefs myPrefs;
+
+    private String fromStore;
+    private String fromShelf;
+    private String fromLevel;
+    private String fromSpace;
+
+    private String address;
+
+    private String toStore;
+    private String toShelf;
+    private String toLevel;
+    private String toSpace;
+    AlertDialog alertDialog;
+
+    private Handler shandler;
+
+    private boolean proceedSearch = true;
+
 
 
 
@@ -154,6 +181,8 @@ public class QueryByProduct extends AppCompatActivity {
         loadingText = findViewById(R.id.loading);
         showing = findViewById(R.id.showing_results);
         move_item = findViewById(R.id.move_product);
+        myPrefs = new MyPrefs();
+        shandler = new Handler();
 
 
         String apiHost = dbHandler.getApiHost();
@@ -205,6 +234,7 @@ public class QueryByProduct extends AppCompatActivity {
         dbHandler.clearStockTable();
 
         listView = findViewById(R.id.transaction_history_listview);
+        fetchProducts();
 
         try {
             getQrCodeString = getIntent().getStringExtra("qrCode");
@@ -217,15 +247,15 @@ public class QueryByProduct extends AppCompatActivity {
             }
 
             if (function.equals("ReturnQR")){
-                fromStoreID = getIntent().getStringExtra("fromStoreID");
-                fromStoreName = getIntent().getStringExtra("fromStoreName");
-                fromLocationID = getIntent().getStringExtra("fromLocationID");
-                fromLocationName = getIntent().getStringExtra("fromLocationName");
+                fromStore = getIntent().getStringExtra("fromStore");
+                fromShelf = getIntent().getStringExtra("fromShelf");
+                fromLevel = getIntent().getStringExtra("fromLevel");
+                fromSpace = getIntent().getStringExtra("fromSpace");
 
-                toStoreID = getIntent().getStringExtra("toStoreID");
-                toStoreName = getIntent().getStringExtra("toStoreName");
-                toLocationID = getIntent().getStringExtra("toLocationID");
-                toLocationName = getIntent().getStringExtra("toLocationName");
+                toStore = getIntent().getStringExtra("toStore");
+                toShelf = getIntent().getStringExtra("toShelf");
+                toLevel = getIntent().getStringExtra("toLevel");
+                toSpace = getIntent().getStringExtra("toSpace");
 
                 moveDate = getIntent().getStringExtra("moveDate");
                 moveTime = getIntent().getStringExtra("moveTime");
@@ -233,13 +263,14 @@ public class QueryByProduct extends AppCompatActivity {
                 itemCode = getIntent().getStringExtra("itemCode");
                 product_name = getIntent().getStringExtra("productName");
                 productCode.setText(itemCode);
-                productID = Integer.valueOf(itemCode);
+                productID = itemCode;
 
                 DBHandler dbHandler1 = new DBHandler(this);
                 staffName = dbHandler1.getFirstName()+" "+dbHandler1.getLastName();
                 staffID = String.valueOf(dbHandler1.getIssuerID());
+                Log.d("itemCode2",itemCode);
 
-                moveFromQR(Integer.valueOf(itemCode), product_name, fromStoreID, fromStoreName, fromLocationID, fromLocationName, toStoreID, toStoreName, toLocationID, toLocationName, staffID, staffName, moveDate, moveTime);
+                moveFromQR(itemCode, product_name, fromStore, fromShelf, fromLevel, fromSpace, toStore, toShelf,  toLevel, toSpace, staffID, staffName, moveDate, moveTime);
 
                 queryProduct();
             }
@@ -248,18 +279,165 @@ public class QueryByProduct extends AppCompatActivity {
 
         }
 
+
+
         String classname = QueryByProduct.class.getName().toString();
         Log.e("Class Name", classname);
         fetchedProductTable = new ArrayList<>();
         adapter = new ArrayAdapter<RetrievedProductMain>(getApplicationContext(), R.layout.issue_history_list, R.id.receiver_name, fetchedProductTable);
 
+        TextWatcher textWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                //if(KeyEvent.KEYCODE_DEL == 67 || KeyEvent.KEYCODE_FORWARD_DEL == 112){
+                //    proceedSearch = true;
+                //}
+
+
+                shandler.removeCallbacksAndMessages(null);
+                shandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        fetchProducts();
+                        //search();
+                    }
+                }, FETCH_DELAY_TIME);
+
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                LinearProgressIndicator linearProgressIndicator = findViewById(R.id.productFetchProgress);
+                linearProgressIndicator.setVisibility(View.VISIBLE);
+                if (productCode.getText().toString().equals("")){
+                    linearProgressIndicator.setVisibility(View.GONE);
+                    move_item.setVisibility(View.GONE);
+                }
+
+
+            }
+        };
+
+        productCode.addTextChangedListener(textWatcher);
+
 
     }
 
-    public void moveFromQR(Integer productID, String product_name, String fromStoreID, String fromStoreName, String fromLocationID, String fromLocationName, String toStoreID, String toStoreName, String toLocationID, String toLocationName, String staffID, String staffName, String moveDate, String moveTime){
+    private void fetchProducts(){
+        //if (proceedSearch){
+        //    search();
+        //}
+
+        FetchStockTable fetchStockTable = new FetchStockTable(new FetchStockTaskListener() {
+            @Override
+            public void onTaskComplete(JSONArray jsonArray) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        //LinearProgressIndicator linearProgressIndicator = findViewById(R.id.staffFetchProgress);
+                        //linearProgressIndicator.setVisibility(View.GONE);
+                        fetchedStock = new ArrayList<>();
+                        DBHandler dbHandler = new DBHandler(getApplicationContext());
+                        SQLiteDatabase db = dbHandler.getReadableDatabase();
+                        Cursor cursor = db.rawQuery("SELECT * FROM stockTable LIMIT 6",null);
+                        while (cursor.moveToNext()){
+                            String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
+                            String productName = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
+                            String productDesc = cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc"));
+
+                            Float productQuantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
+                            String productStore = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
+                            String productUnit = cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit"));
+                            String productLocation = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
+                            String imageAvailable = cursor.getString(cursor.getColumnIndexOrThrow("ImageAvailable"));
+
+                            RetrievedStock retrievedStock = new RetrievedStock(id,productName,productDesc,productQuantity,productLocation,productStore,productUnit,null,imageAvailable);
+                            fetchedStock.add(retrievedStock);
+
+                        }
+
+                        dbHandler.close();
+                        db.close();
+                    }
+                });
+
+
+                ArrayAdapter<RetrievedStock> arrayAdapter = new ArrayAdapter<RetrievedStock>(getApplicationContext(),R.layout.stock_list_layout,R.id.item_code, fetchedStock){
+                    @Override
+                    public View getView(int position, View convertView, ViewGroup parent) {
+                        View view = super.getView(position, convertView, parent);
+
+                        RetrievedStock retrievedStock = getItem(position);
+                        TextView item_code = view.findViewById(R.id.item_code);
+                        TextView item_name = view.findViewById(R.id.item_name);
+                        TextView item_location = view.findViewById(R.id.item_location);
+
+                        item_name.setText(retrievedStock.getName());
+                        item_name.setSelected(true);
+                        item_code.setText(retrievedStock.getID());
+                        item_location.setText(retrievedStock.getStore());
+
+                        //Selected receiver
+                        productCode = findViewById(R.id.item_code_input);
+                        //productCode.setEnabled(true);
+
+
+                        productCode.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                            @Override
+                            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                //proceedSearch = false;
+                                //Toast.makeText(QueryByProduct.this, "Item Clicked", Toast.LENGTH_SHORT).show();
+                                RetrievedStock retrievedStock1 = getItem(position);
+                                //MaterialAutoCompleteTextView materialAutoCompleteTextView1 = productCode;
+                                productCode.setText(retrievedStock1.getID());
+                                productCode.setError(null);
+                                address = retrievedStock1.getLocation();
+                                itemCode = retrievedStock1.getID();
+                                //proceedSearch = false;
+                                //search();
+                                queryProduct();
+                                //proceedSearch = false;
+                                move_item.setVisibility(View.VISIBLE);
+                                retrieved_location_id = retrievedStock1.getLocation();
+                                retrieved_store_id = retrievedStock1.getStore();
+                                Log.i("++ Location ID", retrieved_location_id);
+                                Log.i("Store ID", retrieved_store_id);
+                                ///MyPrefs myPrefs = new MyPrefs();
+                                //myPrefs.saveReceiverFirstName();
+                                //receiver_name = retrievedStaff1.getfirstName();
+                                //receiver_dept = retrievedStaff1.getDepartment();
+                                //staffID = retrievedStaff1.getID();
+                                //TextView textView = findViewById(R.id.remove);
+                                //textView.setVisibility(View.VISIBLE);
+                                //productCode.setEnabled(false);
+
+                            }
+                        });
+
+                        return view;
+                    }
+                };
+
+                productCode.setThreshold(0);
+                productCode.setAdapter(arrayAdapter);
+                arrayAdapter.notifyDataSetChanged();
+
+            }
+        });
+        fetchStockTable.execute();
+    }
+
+    public void moveFromQR(String productID, String product_name, String fromStore, String fromShelf, String fromLevel, String fromSpace, String toStore, String toShelf, String toLevel, String toSpace, String staffID, String staffName, String moveDate, String moveTime){
         DBHandler dbHandler1 = new DBHandler(getApplicationContext());
 
-        dbHandler1.syncMoveTable(productID,product_name,fromStoreID,fromStoreName,fromLocationID,fromLocationName,toStoreID,toStoreName,toLocationID,toLocationName,staffID,staffName,moveDate,moveTime);
+        dbHandler1.syncMoveTable(productID,product_name,fromStore,fromShelf,fromLevel,fromSpace,toStore,toShelf,toLevel,toSpace,staffID,staffName,moveDate,moveTime);
         SyncMoveHistoryTask syncMoveHistoryTask = new SyncMoveHistoryTask(new SyncMoveHistoryTaskListener() {
             @Override
             public void onTaskComplete(JSONArray jsonArray) {
@@ -293,6 +471,12 @@ public class QueryByProduct extends AppCompatActivity {
         Intent intent = new Intent(QueryByProduct.this, ScanQR.class);
         intent.putExtra("class", classname);
         intent.putExtra("function","ScanProduct");
+        try{
+            alertDialog.dismiss();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
         //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
 
@@ -302,13 +486,14 @@ public class QueryByProduct extends AppCompatActivity {
         String classname = QueryByProduct.class.getName().toString();
         Intent intent = new Intent(QueryByProduct.this, ScanQR.class);
         intent.putExtra("class", classname);
-        intent.putExtra("fromLocationID", fromLocationID);
-        intent.putExtra("fromLocationName",fromLocationName);
-        intent.putExtra("fromStoreID",fromStoreID);
-        intent.putExtra("fromStoreName",fromStoreName);
+        intent.putExtra("fromStore", fromStore);
+        intent.putExtra("fromShelf",fromShelf);
+        intent.putExtra("fromLevel",fromLevel);
+        intent.putExtra("fromSpace",fromSpace);
         intent.putExtra("productName",product_name);
         intent.putExtra("function","MoveQR");
         intent.putExtra("itemCode",itemCode);
+        Log.d("itemCode0",itemCode);
         startActivity(intent);
 
     }
@@ -326,21 +511,73 @@ public class QueryByProduct extends AppCompatActivity {
                 public void onTaskComplete(JSONArray jsonArray) {
 
                     SQLiteDatabase db = dbHandler.getReadableDatabase();
-                    Cursor cursor = db.rawQuery("SELECT * FROM stockTable",null);
+                    Cursor cursor = db.rawQuery("SELECT * FROM stockTable WHERE UPPER(ProductName)=? OR id=?", new String[]{enteredItemCode.toUpperCase(), enteredItemCode});
                     while (cursor.moveToNext()){
                         TextView productName = findViewById(R.id.product_name);
                         TextView productQuantity = findViewById(R.id.product_quantity);
                         TextView productStore = findViewById(R.id.product_store);
                         TextView productLocation = findViewById(R.id.product_location);
                         product_name = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-                        productID = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                        productID = cursor.getString(cursor.getColumnIndexOrThrow("id"));
+                        address = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
+                        String store1 = cursor.getString(cursor.getColumnIndexOrThrow("ProductStore"));
+
+                        productStore.setText(store1);
+                        productLocation.setText(address);
+
+                        /*
+                        if(getQrCodeString != null){
+                            address = cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation"));
+                        }
+
+                         */
+
+                        /*
+
+                        try{
+                            if(!address.contains("-") || !address.contains("SHELF") || !address.contains("LEVEL") || !address.contains("SPACE")){
+                                Log.d("Exception",address);
+                                throw new Exception();
+
+                            }
+
+                            move_item.setVisibility(View.VISIBLE);
+
+                            String[] addressArray = address.split("-");
+                            String store1 = addressArray[0];
+                            store1 = store1.trim();
+                            store1 = store1.replace("_"," ");
+                            String shelf1 = addressArray[1];
+                            shelf1 = shelf1.trim();
+                            String level1 = addressArray[2];
+                            level1 = level1.trim();
+                            String space1 = addressArray[3];
+                            space1 = space1.replace(" ","");
+                            //itemCode = addressArray[4];
+
+                            String shelfNumber = shelf1.substring(5);
+                            String levelNumber = level1.substring(5);
+                            String spaceNumber = space1.substring(5);
+
+                            productStore.setText(store1);
+                            String productLocationString = "Shelf: "+shelfNumber+", Level: "+levelNumber+", Space: "+spaceNumber;
+                            productLocation.setText(productLocationString);
+
+                        } catch (Exception e) {
+                            Log.d("Exception","Raised");
+                            e.printStackTrace();
+                            productStore.setText("N/A");
+                            productLocation.setText("N/A");
+                        }
+
+                         */
 
 
                         productName.setText(product_name);
                         productName.setSelected(true);
                         productQuantity.setText(cursor.getString(cursor.getColumnIndexOrThrow("ProductQuantity"))+" "+cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit")));
-                        productStore.setText(cursor.getString(cursor.getColumnIndexOrThrow("ProductStore")));
-                        productLocation.setText(cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation")));
+                        //productStore.setText(cursor.getString(cursor.getColumnIndexOrThrow("ProductStore")));
+                        //productLocation.setText(cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation")));
                     }
 
                     FetchProductMainTable fetchProductMainTable = new FetchProductMainTable(new FetchProductMainTaskListener() {
@@ -519,6 +756,8 @@ public class QueryByProduct extends AppCompatActivity {
                     fetchProductMainTable.execute();
 
 
+
+
                 }
             });
             fetchStockTable.execute();
@@ -531,7 +770,7 @@ public class QueryByProduct extends AppCompatActivity {
         }
     }
 
-    public void search(View view) {
+    public void search() {
         TextView productName = findViewById(R.id.product_name);
         TextView productQuantity = findViewById(R.id.product_quantity);
         TextView productStore = findViewById(R.id.product_store);
@@ -543,15 +782,18 @@ public class QueryByProduct extends AppCompatActivity {
         productStore.setText("");
         productLocation.setText("");
         productCode.setError(null);
-        adapter.clear();
-        adapter.notifyDataSetChanged();
         try{
+            adapter = new ArrayAdapter<RetrievedProductMain>(getApplicationContext(), R.layout.issue_history_list, R.id.receiver_name, fetchedProductTable);
+            adapter.clear();
+            adapter.notifyDataSetChanged();
             itemCode = productCode.getText().toString();
         } catch (Exception e){
             e.printStackTrace();
         }
 
-        queryProduct();
+        //queryProduct();
+        //populate materialautocomplete textview with product names
+        //then query product on selection
     }
 
     public void move_product(View view) {
@@ -559,10 +801,51 @@ public class QueryByProduct extends AppCompatActivity {
         MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(QueryByProduct.this);
         View view1 = getLayoutInflater().inflate(R.layout.move_product, null);
         materialAlertDialogBuilder.setView(view1);
-        AlertDialog alertDialog = materialAlertDialogBuilder.create();
-        TextView item_name = view1.findViewById(R.id.move_item_name);
-        item_name.setText("Move "+product_name);
+        alertDialog = materialAlertDialogBuilder.create();
+        TextView item_name = view1.findViewById(R.id.item_name);
+        item_name.setText(product_name);
         item_name.setSelected(true);
+
+        TextView store_name = view1.findViewById(R.id.store_name);
+        TextView shelf = view1.findViewById(R.id.shelf);
+        TextView level = view1.findViewById(R.id.level);
+        TextView space = view1.findViewById(R.id.space);
+
+        try{
+            if(!address.contains("-") || !address.contains("SHELF") || !address.contains("LEVEL") || !address.contains("SPACE")){
+                throw new Exception();
+            }
+            String[] addressArray = address.split("-");
+            String store1 = addressArray[0];
+            store1 = store1.trim();
+            store1 = store1.replace("_"," ");
+            String shelf1 = addressArray[1];
+            shelf1 = shelf1.trim();
+            String level1 = addressArray[2];
+            level1 = level1.trim();
+            String space1 = addressArray[3];
+            space1 = space1.replace(" ","");
+            //itemCode = addressArray[4];
+
+            String shelfNumber = shelf1.substring(5);
+            String levelNumber = level1.substring(5);
+            String spaceNumber = space1.substring(5);
+
+            store_name.setText(store1);
+            shelf.setText("Shelf: "+shelfNumber);
+            level.setText("Level: "+levelNumber);
+            space.setText("Space: "+spaceNumber);
+        } catch (Exception e){
+            e.printStackTrace();
+            store_name.setText("N/A");
+            shelf.setText("Shelf: N/A");
+            level.setText("Level: N/A");
+            space.setText("Space: N/A");
+        }
+
+
+
+        /*
         LinearProgressIndicator linearProgressIndicator1 = view1.findViewById(R.id.move_progress_indicator);
         linearProgressIndicator1.setVisibility(View.VISIBLE);
 
@@ -642,8 +925,9 @@ public class QueryByProduct extends AppCompatActivity {
 
                 for (int i = 0; i < arrayAdapterx.getCount(); i++) {
                     RetrievedStore currentItem = arrayAdapterx.getItem(i);
-                    String storeID = currentItem.getId().toString();
-                    if(storeID.equals(retrieved_store_id)){
+                    //String storeID = currentItem.getId().toString();
+                    String storeName = currentItem.getStoreName();
+                    if(storeName.equals(retrieved_store_id)){
                         spinnerx.setSelection(i);
                         spinnerx.setEnabled(false);
                         break;
@@ -697,9 +981,6 @@ public class QueryByProduct extends AppCompatActivity {
 
 
 
-
-
-
                                 location_name.setText(retrievedLocation.getLocationName());
                                 location_name.setTextColor(Color.GRAY);
                                 if(retrievedLocation.getStoreID().equals(2)){
@@ -725,12 +1006,15 @@ public class QueryByProduct extends AppCompatActivity {
 
                         for (int i = 0; i < arrayAdapter2x.getCount(); i++) {
                             RetrievedLocation currentItem = arrayAdapter2x.getItem(i);
-                            String locationID = currentItem.getId().toString();
-                            if(locationID.equals(retrieved_location_id)){
+                            //String locationID = currentItem.getId().toString();
+                            String locationName = currentItem.getLocationName();
+                            //Log.d("Location ID", retrieved_location_id);
+                            if(locationName.equals(retrieved_location_id)){
                                 spinner2x.setSelection(i);
                                 spinner2x.setEnabled(false);
                                 fromLocationID = String.valueOf(currentItem.getId());
                                 fromLocationName = String.valueOf(currentItem.getLocationName());
+                                Log.d("From Location", currentItem.getLocationName());
                                 break;
                             }
                         }
@@ -878,6 +1162,7 @@ public class QueryByProduct extends AppCompatActivity {
         });
         fetchStoreTable.execute();
 
+
         MaterialButton materialButton = view1.findViewById(R.id.move);
         materialButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -895,11 +1180,20 @@ public class QueryByProduct extends AppCompatActivity {
                     try{
                         Request request = new Request.Builder()
                                 .url("https://"+dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/tst/getDateTime")
+                                .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                                 //.post(requestBody)
                                 .build();
                         Response response = okHttpClient.newCall(request).execute();
                         String resString = response.body().string();
                         Log.i("Response",resString);
+
+                        JSONObject jsonObject3 = new JSONObject(resString);
+
+                        String status1 = jsonObject3.optString("status");
+                        resString = jsonObject3.optString("data");
+
+                        TokenChecker tokenChecker = new TokenChecker();
+                        tokenChecker.checkToken(status1, getApplicationContext(), QueryByProduct.this);
 
                         response.close();
                         return resString;
@@ -936,7 +1230,7 @@ public class QueryByProduct extends AppCompatActivity {
                 syncMoveHistoryTask.execute();
             }
         });
-
+        */
 
         alertDialog.show();
 
@@ -965,18 +1259,28 @@ public class QueryByProduct extends AppCompatActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    move_item.setVisibility(View.GONE);
+                   // move_item.setVisibility(View.GONE);
                 }
             });
             try  {
+                enteredItemCode = productCode.getText().toString();
                 String sql = "{\"type\":\"queryByProduct\",\"condition\":\"getStockTable\",\"enteredItemCode\":\""+enteredItemCode+"\"}";
                 RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody)
                         .build();
                 Response response = okHttpClient.newCall(request).execute();
                 String resString = response.body().string();
+
+                JSONObject jsonObject3 = new JSONObject(resString);
+
+                String status1 = jsonObject3.optString("status");
+                resString = jsonObject3.optString("data");
+
+                TokenChecker tokenChecker = new TokenChecker();
+                tokenChecker.checkToken(status1, getApplicationContext(), QueryByProduct.this);
 
                 jsonArray = new JSONArray(resString);
                 response.close();
@@ -985,22 +1289,24 @@ public class QueryByProduct extends AppCompatActivity {
 
                     for (int i = 0; i < jsonArray.length(); i++){
                         JSONObject jsonObject = jsonArray.getJSONObject(i);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                move_item.setVisibility(View.VISIBLE);
-                            }
-                        });
-                        retrieved_location_id = jsonObject.optString("locationID");
-                        retrieved_store_id = jsonObject.optString("storeID");
+                        Log.d("JSON",jsonObject.toString());
+                       // retrieved_location_id = jsonObject.optString("locationID");
+                       // retrieved_store_id = jsonObject.optString("storeID");
                         String itemCode = jsonObject.optString("itemCode");
                         String productName = jsonObject.optString("productName");
                         String productDesc = jsonObject.optString("productDesc");
                         String productStore = jsonObject.optString("productStore");
                         String productLocation = jsonObject.optString("productLocation");
                         String productUnit = jsonObject.optString("productUnit");
-                        int productQuantity = jsonObject.optInt("productQuantity");
-                        dbHandler1.syncStockTable(itemCode,productName,productDesc,productQuantity,productStore,productLocation,productUnit);
+                        double productQuantity = jsonObject.optDouble("productQuantity");
+                        String imageAvailable = jsonObject.optString("imageAvailable");
+
+                        ItemLocationParser itemLocationParser = new ItemLocationParser();
+                        String[] parsedLocation = itemLocationParser.parseLocation(productLocation);
+                        productStore = parsedLocation[0];
+                        productLocation = parsedLocation[1];
+
+                        dbHandler1.syncStockTable(itemCode,productName,productDesc,(float)productQuantity,productStore,productLocation,productUnit,imageAvailable);
                     }
 
 
@@ -1010,7 +1316,7 @@ public class QueryByProduct extends AppCompatActivity {
                         public void run() {
                             move_item.setVisibility(View.GONE);
                             productCode.setError("Item not found");
-                            Toast.makeText(QueryByProduct.this, "Item not found", Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(QueryByProduct.this, "Item not found", Toast.LENGTH_SHORT).show();
                         }
                     });
 
@@ -1029,6 +1335,9 @@ public class QueryByProduct extends AppCompatActivity {
             if (listener != null) {
                 listener.onTaskComplete(jsonArray);
             }
+            LinearProgressIndicator linearProgressIndicator = findViewById(R.id.productFetchProgress);
+            linearProgressIndicator.setVisibility(View.INVISIBLE);
+            Log.d("Fetch Complete", retrieved_location_id+" - "+retrieved_store_id);
 
         }
     }
@@ -1059,10 +1368,20 @@ public class QueryByProduct extends AppCompatActivity {
                 RequestBody requestBody =  RequestBody.create(sql1, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody)
                         .build();
                 Response response = okHttpClient.newCall(request).execute();
                 String resString = response.body().string();
+
+                JSONObject jsonObject3 = new JSONObject(resString);
+
+                String status1 = jsonObject3.optString("status");
+                resString = jsonObject3.optString("data");
+
+                TokenChecker tokenChecker = new TokenChecker();
+                tokenChecker.checkToken(status1, getApplicationContext(), QueryByProduct.this);
+
                 jsonArray1 = new JSONArray(resString);
                 response.close();
 
@@ -1087,10 +1406,20 @@ public class QueryByProduct extends AppCompatActivity {
                 RequestBody requestBody2 =  RequestBody.create(sql2, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request2 = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody2)
                         .build();
                 Response response2 = okHttpClient.newCall(request2).execute();
                 String resString2 = response2.body().string();
+
+                JSONObject jsonObject4 = new JSONObject(resString2);
+
+                String status2 = jsonObject4.optString("status");
+                resString2 = jsonObject4.optString("data");
+
+
+                tokenChecker.checkToken(status2, getApplicationContext(), QueryByProduct.this);
+
                 jsonArray2 = new JSONArray(resString2);
                 response.close();
 
@@ -1122,7 +1451,8 @@ public class QueryByProduct extends AppCompatActivity {
             if (listener != null) {
                 listener.onTaskComplete(jsonArray);
             }
-
+            //LinearProgressIndicator linearProgressIndicator = findViewById(R.id.productFetchProgress);
+            //linearProgressIndicator.setVisibility(View.INVISIBLE);
         }
     }
 
@@ -1160,10 +1490,19 @@ public class QueryByProduct extends AppCompatActivity {
                 RequestBody requestBody =  RequestBody.create(storesql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody)
                         .build();
                 Response response = okHttpClient.newCall(request).execute();
                 String resString = response.body().string();
+
+                JSONObject jsonObject3 = new JSONObject(resString);
+
+                String status1 = jsonObject3.optString("status");
+                resString = jsonObject3.optString("data");
+
+                TokenChecker tokenChecker = new TokenChecker();
+                tokenChecker.checkToken(status1, getApplicationContext(), QueryByProduct.this);
 
                 jsonArray1 = new JSONArray(resString);
                 response.close();
@@ -1172,10 +1511,19 @@ public class QueryByProduct extends AppCompatActivity {
                 RequestBody requestBody1 =  RequestBody.create(locationsql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                 Request request1 = new Request.Builder()
                         .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                         .post(requestBody1)
                         .build();
                 Response response1 = okHttpClient.newCall(request1).execute();
                 String resString1 = response1.body().string();
+
+                JSONObject jsonObject5 = new JSONObject(resString1);
+
+                String status2 = jsonObject5.optString("status");
+                resString1 = jsonObject5.optString("data");
+
+                tokenChecker.checkToken(status2, getApplicationContext(), QueryByProduct.this);
+
 
                 jsonArray2 = new JSONArray(resString1);
                 response.close();
@@ -1246,27 +1594,38 @@ public class QueryByProduct extends AppCompatActivity {
 
                 while (cursor.moveToNext()){
 
-                    Integer productIDx = cursor.getInt(cursor.getColumnIndexOrThrow("ProductID"));
+                    String productIDx = cursor.getString(cursor.getColumnIndexOrThrow("ProductID"));
                     String product_namex = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-                    String fromStoreIDx = cursor.getString(cursor.getColumnIndexOrThrow("FromStoreID"));
-                    String fromStoreNamex = cursor.getString(cursor.getColumnIndexOrThrow("FromStoreName"));
-                    String fromLocationIDx = cursor.getString(cursor.getColumnIndexOrThrow("FromLocationID"));
-                    String fromLocationNamex = cursor.getString(cursor.getColumnIndexOrThrow("FromLocationName"));
-                    String toStoreIDx = cursor.getString(cursor.getColumnIndexOrThrow("ToStoreID"));
-                    String toStoreNamex = cursor.getString(cursor.getColumnIndexOrThrow("ToStoreName"));
+                    String fromStorex = cursor.getString(cursor.getColumnIndexOrThrow("FromStore"));
+                    String fromShelfx = cursor.getString(cursor.getColumnIndexOrThrow("FromShelf"));
+                    String fromLevelx = cursor.getString(cursor.getColumnIndexOrThrow("FromLevel"));
+                    String fromSpacex = cursor.getString(cursor.getColumnIndexOrThrow("FromSpace"));
+                    String toStorex = cursor.getString(cursor.getColumnIndexOrThrow("ToStore"));
+                    String toShelfx = cursor.getString(cursor.getColumnIndexOrThrow("ToShelf"));
                     String MoveDate = cursor.getString(cursor.getColumnIndexOrThrow("MoveDate"));
                     String MoveTime = cursor.getString(cursor.getColumnIndexOrThrow("MoveTime"));
-                    String toLocationIDx = cursor.getString(cursor.getColumnIndexOrThrow("ToLocationID"));
-                    String toLocationNamex = cursor.getString(cursor.getColumnIndexOrThrow("ToLocationName"));
+                    String toLevelx = cursor.getString(cursor.getColumnIndexOrThrow("ToLevel"));
+                    String toSpacex = cursor.getString(cursor.getColumnIndexOrThrow("ToSpace"));
 
-                    String insertSql = "{\"type\":\"queryByProduct\",\"condition\":\"syncMoveHistory\",\"ProductID\":\""+productIDx+"\",\"ProductName\":\""+product_namex+"\",\"FromStoreID\":\""+fromStoreIDx+"\",\"FromStoreName\":\""+fromStoreNamex+"\",\"FromLocationID\":\""+fromLocationIDx+"\",\"FromLocationName\":\""+fromLocationNamex+"\",\"ToStoreID\":\""+toStoreIDx+"\",\"ToStoreName\":\""+toStoreNamex+"\",\"ToLocationID\":\""+toLocationIDx+"\",\"ToLocationName\":\""+toLocationNamex+"\",\"StaffID\":\""+staffID+"\",\"StaffName\":\""+staffName+"\",\"MoveDate\":\""+MoveDate+"\",\"MoveTime\":\""+MoveTime+"\",\"updateStoreID\":\""+toStoreID+"\",\"updateStoreName\":\""+toStoreName+"\",\"updateLocationID\":\""+toLocationID+"\",\"updateLocationName\":\""+toLocationName+"\",\"productID\":\""+productID+"\"}";
+                    String insertSql = "{\"type\":\"queryByProduct\",\"condition\":\"syncMoveHistory\",\"ProductID\":\""+productIDx+"\",\"ProductName\":\""+product_namex+"\",\"FromStore\":\""+fromStorex+"\",\"FromShelf\":\""+fromShelfx+"\",\"FromLevel\":\""+fromLevelx+"\",\"FromSpace\":\""+fromSpacex+"\",\"ToStore\":\""+toStorex+"\",\"ToShelf\":\""+toShelfx+"\",\"ToLevel\":\""+toLevelx+"\",\"ToSpace\":\""+toSpacex+"\",\"StaffID\":\""+staffID+"\",\"StaffName\":\""+staffName+"\",\"MoveDate\":\""+MoveDate+"\",\"MoveTime\":\""+MoveTime+"\",\"productID\":\""+productID+"\"}";
                     RequestBody requestBody =  RequestBody.create(insertSql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                     Request request = new Request.Builder()
                             .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
+                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                             .post(requestBody)
                             .build();
                     Response response = okHttpClient.newCall(request).execute();
                     String resString = response.body().string();
+
+                    //Log.d("ReturnFromApi",resString);
+
+                    JSONObject jsonObject3 = new JSONObject(resString);
+
+                    String status1 = jsonObject3.optString("status");
+                    resString = jsonObject3.optString("data");
+
+                    TokenChecker tokenChecker = new TokenChecker();
+                    tokenChecker.checkToken(status1, getApplicationContext(), QueryByProduct.this);
 
                     JSONObject jsonObject = new JSONObject(resString);
                     response.close();

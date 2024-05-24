@@ -451,6 +451,7 @@ public class FingerPrint extends AppCompatActivity {
                                     String new_date;
                                     String new_time;
                                     DBHandler dbHandler = new DBHandler(getApplicationContext());
+                                    MyPrefs myPrefs = new MyPrefs();
 
                                     ExecutorService executorService = Executors.newSingleThreadExecutor();
                                     Future<String> futureResult = executorService.submit(() -> {
@@ -458,6 +459,7 @@ public class FingerPrint extends AppCompatActivity {
                                         try{
                                             Request request = new Request.Builder()
                                                     .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/tst/getDateTime")
+                                                    .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                                                     //.post(requestBody)
                                                     .build();
                                             Response response = okHttpClient.newCall(request).execute();
@@ -487,7 +489,7 @@ public class FingerPrint extends AppCompatActivity {
                                         String issuer_name = getIntent().getStringExtra("issuer_name");
 
                                         dbHandler.addOngoingIssueMeta(new_id, dbHandler.getIssuerID(),issuer_name, Integer.valueOf(staffID),receiver_full_name,receiver_dept,new_date,new_time);
-                                        dbHandler.updateOngoingIssueTable(new_id, dbHandler.getIssuerID(),issuer_name, Integer.valueOf(staffID),receiver_full_name,receiver_dept,new_date,new_time,bookNumber);
+                                        dbHandler.updateOngoingIssueTable(new_id, dbHandler.getIssuerID(),issuer_name, Integer.valueOf(staffID),receiver_full_name,receiver_dept,new_date,new_time,bookNumber,null);
 
                                     } catch (Exception e) {
                                         e.printStackTrace();
@@ -633,6 +635,7 @@ public class FingerPrint extends AppCompatActivity {
             dbHandler1.clearStockTable();
             dbHandler1.clearStaffTable();
             JSONArray jsonArray = null;
+            MyPrefs myPrefs = new MyPrefs();
             try {
 
                 String sql = "{\"type\":\"staff_login\",\"can_number\":\""+can_number+"\"}";
@@ -641,6 +644,7 @@ public class FingerPrint extends AppCompatActivity {
                     RequestBody requestBody =  RequestBody.create(sql, okhttp3.MediaType.parse("application/json; charset=utf-8"));
                     Request request = new Request.Builder()
                             .url("https://"+ dbHandler1.getApiHost()+":"+dbHandler1.getApiPort()+"/api/v1/fetch")
+                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
                             .post(requestBody)
                             .build();
                     Response response = okHttpClient.newCall(request).execute();

@@ -7,6 +7,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Objects;
+
 public class DBHandler extends SQLiteOpenHelper {
     private static final String DB_NAME = "storesdb";
     private static final int DB_VERSION = 1;
@@ -84,6 +88,11 @@ public class DBHandler extends SQLiteOpenHelper {
 
     private static final String staffID = "staffID";
 
+    private static final String staffAddedBy = "addedBy";
+    private static final String staffDateAdded = "dateAdded";
+    private static final String staffTimeAdded = "timeAdded";
+    private static final String staffAccessIDstatus = "accessIDstatus";
+
 
     public DBHandler(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
@@ -105,14 +114,15 @@ public class DBHandler extends SQLiteOpenHelper {
                 + stockID + " TEXT PRIMARY KEY, "
                 + stockProductName + " TEXT,"
                 + stockProductDesc + " TEXT,"
-                + stockProductQuantity + " INTEGER,"
+                + stockProductQuantity + " FLOAT,"
                 + stockProductStore + " TEXT,"
-                + "ProductUnit"+" TEXT,"+
+                + "ProductUnit"+" TEXT,"
+                + "ImageAvailable"+" TEXT,"+
                 stockProductLocation + " TEXT)";
         db.execSQL(quer);
 
         String createIssueHistory = "CREATE TABLE " + "issueHistoryTable" + " ("
-                + "id" + " INTEGER, "
+                + "id" + " TEXT, "
                 + "ProductName" + " TEXT,"
                 + "ProductDesc" + " TEXT,"
                 + "ProductQuantity" + " INTEGER,"
@@ -185,6 +195,7 @@ public class DBHandler extends SQLiteOpenHelper {
                 + ongoingIssueProductLocation + " TEXT,"
                 + "ProductUnit"+" TEXT,"
                 + "TransactionID"+" INTEGER,"
+                + "AdditionID"+" TEXT,"
                 + "IssuerID"+" INTEGER,"
                 + "IssuerName"+" TEXT,"
                 + "ReceiverID"+" INTEGER,"
@@ -192,6 +203,7 @@ public class DBHandler extends SQLiteOpenHelper {
                 + "ReceiverDepartment"+" TEXT,"
                 + "TransactionDate"+" TEXT,"
                 + "TransactionTime"+" TEXT,"
+                + "JobNumber"+" TEXT,"
                 + "BookNumber"+" TEXT)";
         db.execSQL(ongissue);
 
@@ -201,6 +213,10 @@ public class DBHandler extends SQLiteOpenHelper {
                 + staffMiddleName + " TEXT,"
                 + staffLastName + " TEXT,"
                 + "canNumber" + " TEXT,"
+                + staffAddedBy + " TEXT,"
+                + staffDateAdded + " TEXT,"
+                + staffTimeAdded + " TEXT,"
+                + staffAccessIDstatus + " TEXT,"
                 + staffType + " TEXT,"
                 + staffDepartment + " TEXT)";
         db.execSQL(stafftable);
@@ -217,16 +233,16 @@ public class DBHandler extends SQLiteOpenHelper {
         db.execSQL(ongoingIssueMeta);
 
         String createMoveTable = "CREATE TABLE " + "moveHistoryTable" + " ("
-                + "ProductID" + " INTEGER PRIMARY KEY, "
+                + "ProductID" + " TEXT PRIMARY KEY, "
                 + "ProductName" + " TEXT,"
-                + "FromStoreID" + " TEXT,"
-                + "FromStoreName" + " TEXT,"
-                + "FromLocationID" + " TEXT,"
-                + "FromLocationName" + " TEXT,"
-                + "ToStoreID" + " TEXT,"
-                + "ToStoreName" + " TEXT,"
-                + "ToLocationID" + " TEXT,"
-                + "ToLocationName" + " TEXT,"
+                + "FromStore" + " TEXT,"
+                + "FromShelf" + " TEXT,"
+                + "FromLevel" + " TEXT,"
+                + "FromSpace" + " TEXT,"
+                + "ToStore" + " TEXT,"
+                + "ToShelf" + " TEXT,"
+                + "ToLevel" + " TEXT,"
+                + "ToSpace" + " TEXT,"
                 + "StaffID" + " TEXT,"
                 + "StaffName" + " TEXT,"
                 + "MoveDate" + " TEXT,"
@@ -240,21 +256,22 @@ public class DBHandler extends SQLiteOpenHelper {
         String dbpath = context.getDatabasePath("storesdb").getPath();
         return SQLiteDatabase.openDatabase(dbpath,null,SQLiteDatabase.OPEN_READWRITE);
     }
-    public void syncMoveTable(Integer productID, String productName, String fromStoreID, String fromStoreName, String fromLocationID, String fromLocationName, String toStoreID, String toStoreName, String toLocationID, String toLocationName, String staff_id, String staff_name, String moveDate, String moveTime ) {
+    //fromStore, fromShelf, fromLevel, fromSpace, toStore, toShelf,  toLevel, toSpace,
+    public void syncMoveTable(String productID, String productName, String fromStore, String fromShelf, String fromLevel, String fromSpace, String toStore, String toShelf, String toLevel, String toSpace, String staff_id, String staff_name, String moveDate, String moveTime ) {
 
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
 
         values.put("ProductID", productID);
         values.put("ProductName", productName);
-        values.put("FromStoreID",fromStoreID);
-        values.put("FromStoreName",fromStoreName);
-        values.put("FromLocationID",fromLocationID);
-        values.put("FromLocationName",fromLocationName);
-        values.put("ToStoreID",toStoreID);
-        values.put("ToStoreName",toStoreName);
-        values.put("ToLocationID",toLocationID);
-        values.put("ToLocationName",toLocationName);
+        values.put("FromStore",fromStore);
+        values.put("FromShelf",fromShelf);
+        values.put("FromLevel",fromLevel);
+        values.put("FromSpace",fromSpace);
+        values.put("ToStore",toStore);
+        values.put("ToShelf",toShelf);
+        values.put("ToLevel",toLevel);
+        values.put("ToSpace",toSpace);
         values.put("StaffID",staff_id);
         values.put("StaffName",staff_name);
         values.put("MoveDate",moveDate);
@@ -265,7 +282,7 @@ public class DBHandler extends SQLiteOpenHelper {
         db.insertWithOnConflict("moveHistoryTable", null, values,SQLiteDatabase.CONFLICT_REPLACE);
     }
 
-    public void updateOngoingIssueTable(Integer transactionID, Integer issuerID, String issuerName, Integer receiverID, String receiverName, String receiverDept,  String transactionDate, String transactionTime, String bookNumber) {
+    public void updateOngoingIssueTable(Integer transactionID, Integer issuerID, String issuerName, Integer receiverID, String receiverName, String receiverDept,  String transactionDate, String transactionTime, String bookNumber, String jobNumber) {
 
         SQLiteDatabase db = this.getWritableDatabase();
 
@@ -280,6 +297,7 @@ public class DBHandler extends SQLiteOpenHelper {
         values.put("TransactionDate", transactionDate);
         values.put("TransactionTime", transactionTime);
         values.put("BookNumber",bookNumber);
+        values.put("JobNumber", jobNumber);
         db.beginTransaction();
         try{
             db.update(ongoingIssueTABLE, values,null, null);
@@ -287,7 +305,6 @@ public class DBHandler extends SQLiteOpenHelper {
         } finally {
             db.endTransaction();
         }
-
 
     }
 
@@ -324,7 +341,7 @@ public class DBHandler extends SQLiteOpenHelper {
         db.insert(ongoingIssueMetaTable, null, values);
     }
 
-    public void logOut(){
+    public void logOut(Context context) throws GeneralSecurityException, IOException {
         SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("DELETE FROM currentUsertable");
         db.execSQL("DELETE  FROM stockTable");
@@ -337,6 +354,10 @@ public class DBHandler extends SQLiteOpenHelper {
         db.execSQL("DELETE FROM storeTable");
         db.execSQL("DELETE FROM locationTable");
         db.execSQL("DELETE FROM moveHistoryTable");
+
+        MyPrefs prefs = new MyPrefs();
+        prefs.saveToken(context,"");
+        prefs.saveLoginStatus(context,false);
 
     }
 
@@ -382,7 +403,7 @@ public class DBHandler extends SQLiteOpenHelper {
         }
     }
 
-    public void syncStockTable(String itemCode, String productName, String productDesc, Integer productQuantity, String productStore, String productLocation, String productUnit) {
+    public void syncStockTable(String itemCode, String productName, String productDesc, Float productQuantity, String productStore, String productLocation, String productUnit, String imageAvailable) {
 
         SQLiteDatabase db = this.getWritableDatabase();
 
@@ -395,6 +416,7 @@ public class DBHandler extends SQLiteOpenHelper {
         values.put(stockProductStore, productStore);
         values.put(stockProductLocation, productLocation);
         values.put("ProductUnit",productUnit);
+        values.put("ImageAvailable",imageAvailable);
 
         db.insertWithOnConflict(TABLE, null, values,SQLiteDatabase.CONFLICT_REPLACE);
     }
@@ -543,7 +565,7 @@ public class DBHandler extends SQLiteOpenHelper {
 
     }
 
-    public void addToOngoingIssue(String ID, String productName, String productDesc, Integer productQuantity, String productStore, String productLocation, String unit) {
+    public void addToOngoingIssue(String ID, String productName, String productDesc, Float productQuantity, String productStore, String productLocation, String unit, String additionID) {
 
         SQLiteDatabase db = this.getWritableDatabase();
 
@@ -556,7 +578,10 @@ public class DBHandler extends SQLiteOpenHelper {
         values.put(stockProductStore, productStore);
         values.put(stockProductLocation, productLocation);
         values.put("ProductUnit",unit);
-
+        if(!Objects.equals(additionID, "noupdate")){
+            values.put("AdditionID",additionID);
+        }
+        //values.put("AdditionID",additionID);
         db.insertWithOnConflict(ongoingIssueTABLE, null, values,SQLiteDatabase.CONFLICT_REPLACE);
     }
 
@@ -603,16 +628,16 @@ public class DBHandler extends SQLiteOpenHelper {
         }
         return empty;
     }
-    public Integer checkOngoingIssueItemQuantity(String id){
+    public Float checkOngoingIssueItemQuantity(String id){
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT ProductQuantity FROM stockTable WHERE id ='"+id+"'",null);
         if(cursor.moveToNext()){
-            Integer quantity = cursor.getInt(cursor.getColumnIndexOrThrow("ProductQuantity"));
+            Float quantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
             return quantity;
         }
-        return -1;
+        return (float) -1.0;
     }
-    public void syncStaffTable(Integer staffiD, String firstName, String middleName, String lastName, String type, String department, String canNumber) {
+    public void syncStaffTable(Integer staffiD, String firstName, String middleName, String lastName, String type, String department, String canNumber, String addedBy, String dateAdded, String timeAdded, String accessIDstatus) {
 
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -623,6 +648,10 @@ public class DBHandler extends SQLiteOpenHelper {
         values.put(staffLastName, lastName);
         values.put(staffType, type);
         values.put(staffDepartment, department);
+        values.put(staffAddedBy, addedBy);
+        values.put(staffDateAdded, dateAdded);
+        values.put(staffTimeAdded, timeAdded);
+        values.put(staffAccessIDstatus, accessIDstatus);
         values.put("canNumber", canNumber);
 
         db.insertWithOnConflict(STAFFTABLE, null, values,SQLiteDatabase.CONFLICT_REPLACE);
@@ -655,7 +684,7 @@ public class DBHandler extends SQLiteOpenHelper {
         db.insert("locationTable", null, values);
     }
 
-    public void syncIssueHistoryTable(Integer ID, String productName, String productDesc, Integer productQuantity, String productStore, String productLocation, String receiverDepartment, String transactionDate, String transactionTime, String bookNumber, String unit) {
+    public void syncIssueHistoryTable(String ID, String productName, String productDesc, Integer productQuantity, String productStore, String productLocation, String receiverDepartment, String transactionDate, String transactionTime, String bookNumber, String unit) {
 
         SQLiteDatabase db = this.getWritableDatabase();
 

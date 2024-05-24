@@ -15,7 +15,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/sfprodisplaybold"
+        android:fontFamily="@font/poppins_bold"
         android:text="Add item"
         android:layout_gravity="center"
         android:textSize="25sp"
@@ -43,7 +43,7 @@
             android:id="@+id/stockSearch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:textColor="@color/black"
             android:textColorHint="@color/black"/>
 
@@ -54,7 +54,7 @@
             android:id="@+id/stockSearch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:textColor="@color/black"
             android:textColorHint="@color/black"/>
             -->
@@ -75,7 +75,7 @@
 
         android:id="@+id/add_items_listview"
         android:layout_width="match_parent"
-        android:layout_height="370dp"
+        android:layout_height="480dp"
         android:layout_marginTop="10dp"
         android:paddingTop="10dp"
         android:layout_marginStart="20dp"
@@ -95,9 +95,10 @@
         app:iconSize="15dp"
         android:textSize="13sp"
         android:text="Search"
+        android:visibility="gone"
         android:textAlignment="center"
         android:textAllCaps="false"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         app:cornerRadius="20sp"
         android:layout_marginTop="20dp"
         android:layout_marginBottom="10dp"/>
@@ -119,7 +120,7 @@
         android:text=" ITEM CODE "
         android:textAlignment="center"
         android:textAllCaps="false"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         app:cornerRadius="20sp"
         android:layout_marginTop="5dp"
         android:clickable="false"/>
@@ -139,7 +140,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginLeft="10dp"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:text="Name:"
             android:textSize="20sp"
             android:textColor="#49454f"
@@ -152,7 +153,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="1dp"
             android:layout_marginEnd="2dp"
-            android:fontFamily="@font/sfprodisplaybold"
+            android:fontFamily="@font/poppins_bold"
             android:text=""
             android:textSize="20sp"
             android:textColor="#49454f"
@@ -178,7 +179,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginLeft="10dp"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:text="Location:"
             android:textSize="20sp"
             android:textColor="#49454f"
@@ -190,7 +191,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="1dp"
-            android:fontFamily="@font/sfprodisplaybold"
+            android:fontFamily="@font/poppins_bold"
             android:text="Shelve 3X"
             android:textSize="20sp"
             android:textColor="#49454f"
@@ -215,7 +216,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginLeft="10dp"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:text="Store:"
             android:textSize="20sp"
             android:textColor="#49454f"
@@ -227,8 +228,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="1dp"
-            android:fontFamily="@font/sfprodisplaybold"
-            android:text="Vault Room"
+            android:fontFamily="@font/poppins_bold"
+            android:text=""
             android:textSize="20sp"
             android:textColor="#49454f"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -252,7 +253,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginLeft="10dp"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:text="QTY Remaining:"
             android:textSize="20sp"
             android:textColor="#49454f"
@@ -264,8 +265,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="1dp"
-            android:fontFamily="@font/sfprodisplaybold"
-            android:text="370"
+            android:fontFamily="@font/poppins_bold"
+            android:text=""
             android:textSize="20sp"
             android:textColor="#49454f"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -295,8 +296,11 @@
             android:id="@+id/issue_quantity"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/sfprodisplaymedium"
+            android:fontFamily="@font/poppins_medium"
             android:textColor="@color/black"
+            android:singleLine="true"
+            android:lines="1"
+            android:maxLines="1"
             android:textColorHint="@color/black" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -316,10 +320,10 @@
         android:text="Add Item"
         android:textAlignment="center"
         android:textAllCaps="false"
-        android:fontFamily="@font/sfprodisplaymedium"
+        android:fontFamily="@font/poppins_medium"
         app:cornerRadius="20sp"
         android:layout_marginTop="20dp"
-        android:layout_marginBottom="160dp"/>
+        android:layout_marginBottom="183.5dp"/>
 
 
 </LinearLayout>

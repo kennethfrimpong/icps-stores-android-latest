@@ -126,14 +126,15 @@ public class ReceiptPage extends AppCompatActivity {
 
             String idx = cursorx.getString(cursorx.getColumnIndexOrThrow("id"));
             String namex = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductName"));
-            Integer quantityx = cursorx.getInt(cursorx.getColumnIndexOrThrow("ProductQuantity"));
+            Float quantityx = cursorx.getFloat(cursorx.getColumnIndexOrThrow("ProductQuantity"));
             String storex = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductStore"));
             String locationx = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductLocation"));
             String descriptionx = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductDesc"));
             String unitx = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductUnit"));
+
             Log.e("Retrieved",namex);
 
-            RetrievedStock retrievedStock = new RetrievedStock(idx,namex,descriptionx,quantityx,storex,locationx,unitx);
+            RetrievedStock retrievedStock = new RetrievedStock(idx,namex,descriptionx,quantityx,storex,locationx,unitx,null,null);
             fetchedOngoingIssueTable.add(retrievedStock);
 
         }
@@ -162,11 +163,15 @@ public class ReceiptPage extends AppCompatActivity {
         ongoingListview.setAdapter(ongoingIssueAdapter);
         ongoingIssueAdapter.notifyDataSetChanged();
 
+        dbHandler.close();
+        db.close();
+
     }
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
+
         DBHandler dbHandler = new DBHandler(getApplicationContext());
         dbHandler.clearOngoingIssueTable();
         dbHandler.clearStockTable();
@@ -175,9 +180,11 @@ public class ReceiptPage extends AppCompatActivity {
 
         Intent intent = new Intent(ReceiptPage.this, HomePage.class);
         startActivity(intent);
+        dbHandler.close();
     }
 
     public void goHome(View view) {
+
         DBHandler dbHandler = new DBHandler(getApplicationContext());
         dbHandler.clearOngoingIssueTable();
         dbHandler.clearStockTable();
@@ -186,5 +193,6 @@ public class ReceiptPage extends AppCompatActivity {
 
         Intent intent = new Intent(ReceiptPage.this, HomePage.class);
         startActivity(intent);
+        dbHandler.close();
     }
 }
