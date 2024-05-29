@@ -2170,7 +2170,9 @@ public class NewIssue extends AppCompatActivity {
                                 bottomSheetAnimation.playAnimation();
                                 bottomSheetAnimation.setRepeatCount(0);
 
-                                new Handler().postDelayed(new Runnable() {
+                                Handler handler = new Handler();
+
+                                handler.postDelayed(new Runnable() {
                                     @Override
                                     public void run() {
                                         bslinearProgressIndicator.setVisibility(View.GONE);
@@ -2180,7 +2182,8 @@ public class NewIssue extends AppCompatActivity {
                                         mIsCardReaderOpen = false;
                                         finish();
                                     }
-                                }, 3000);
+                                }, 2000);
+
 
                             } else {
                                 runOnUiThread(new Runnable() {
@@ -2208,12 +2211,20 @@ public class NewIssue extends AppCompatActivity {
                     bottomSheetAnimation.playAnimation();
                     bottomSheetAnimation.setRepeatCount(0);
                     mIsCardReaderOpen = false;
-                    new Handler().postDelayed(new Runnable() {
+                    Handler handler = new Handler();
+                    handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
                             bsbottomSheetDialog.dismiss();
                         }
                     }, 5000);
+
+                    bsbottomSheetDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                        @Override
+                        public void onDismiss(DialogInterface dialog) {
+                            handler.removeCallbacksAndMessages(null);
+                        }
+                    });
 
 
                 } else {
@@ -2290,17 +2301,24 @@ public class NewIssue extends AppCompatActivity {
 
             String data = gson.toJson(issueDataList);
             try{
-
-                //RequestBody requestBody =  RequestBody.create(data, okhttp3.MediaType.parse("application/json; charset=utf-8"));
-                RequestBody fileBody = RequestBody.create(imageFile, MediaType.parse("image/*"));
-
+                MultipartBody requestBody = null;
                 RequestBody jsonBody = RequestBody.create(data, MediaType.parse("application/json; charset=utf-8"));
 
-                MultipartBody requestBody = new MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("image", imageFile.getName(), fileBody)
-                        .addFormDataPart("issueData", null, jsonBody)
-                        .build();
+                //RequestBody requestBody =  RequestBody.create(data, okhttp3.MediaType.parse("application/json; charset=utf-8"));
+                if(isImageCaptured){
+                    RequestBody fileBody = RequestBody.create(imageFile, MediaType.parse("image/*"));
+                    requestBody = new MultipartBody.Builder()
+                            .setType(MultipartBody.FORM)
+                            .addFormDataPart("image", imageFile.getName(), fileBody)
+                            .addFormDataPart("issueData", null, jsonBody)
+                            .build();
+                } else{
+                    requestBody = new MultipartBody.Builder()
+                            .setType(MultipartBody.FORM)
+                            .addFormDataPart("issueData", null, jsonBody)
+                            .build();
+                }
+
                 Request request = new Request.Builder()
                         .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/stock/issues?jobNumber="+jobNumber+"&bookNumber="+bookNumber)
                         .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
@@ -2310,18 +2328,27 @@ public class NewIssue extends AppCompatActivity {
                 Response response = okHttpClient.newCall(request).execute();
                 String resString3 = response.body().string();
                 if(response.code() == 200){
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(NewIssue.this, "Issue submitted successfully", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
                     simpleResponseMessage.setMessage("success");
                     simpleResponseMessage.setStatus("success");
-                    imageFile.delete();
                 } else {
                     JSONObject jsonObject = new JSONObject(resString3);
                     simpleResponseMessage.setMessage(jsonObject.optString("message"));
                     simpleResponseMessage.setStatus("failed");
                 }
+                if(isImageCaptured && imageFile.exists()){
+                    imageFile.delete();
+                }
                 response.close();
             } catch (Exception e){
                 e.printStackTrace();
-                simpleResponseMessage.setMessage("An error occurred while syncing data");
+                simpleResponseMessage.setMessage("An error occurred");
                 simpleResponseMessage.setStatus("failed");
             }
 
