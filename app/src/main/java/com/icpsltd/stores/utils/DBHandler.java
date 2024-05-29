@@ -190,7 +190,7 @@ public class DBHandler extends SQLiteOpenHelper {
                 + ongoingIssueID + " TEXT PRIMARY KEY, "
                 + ongoingIssueProductName + " TEXT,"
                 + ongoingIssueProductDesc + " TEXT,"
-                + ongoingIssueProductQuantity + " INTEGER,"
+                + ongoingIssueProductQuantity + " FLOAT,"
                 + ongoingIssueProductStore + " TEXT,"
                 + ongoingIssueProductLocation + " TEXT,"
                 + "ProductUnit"+" TEXT,"

@@ -50,6 +50,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.airbnb.lottie.LottieAnimationView;
 import com.credenceid.biometrics.ApduCommand;
 import com.credenceid.biometrics.Biometrics;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
@@ -69,12 +70,14 @@ import com.icpsltd.stores.util.Functions;
 import com.icpsltd.stores.util.Variables;
 import com.icpsltd.stores.utils.CustomEditText;
 import com.icpsltd.stores.utils.DBHandler;
-import com.icpsltd.stores.utils.IssueHistoryData;
+import com.icpsltd.stores.utils.IssueData;
 import com.icpsltd.stores.utils.ItemLocationParser;
 import com.icpsltd.stores.utils.MyPrefs;
+import com.icpsltd.stores.utils.SimpleResponseMessage;
 import com.icpsltd.stores.utils.TokenChecker;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -102,6 +105,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -185,11 +190,14 @@ public class NewIssue extends AppCompatActivity {
     private TextView imageCaptureStatus;
 
     private String base64Image = "";
+    private File imageFile;
     private boolean isImageCaptured = false;
 
     private Handler shandler;
 
     public static final int FETCH_DELAY_TIME = 700;
+
+    LottieAnimationView bottomSheetAnimation;
 
 
     @Override
@@ -215,6 +223,7 @@ public class NewIssue extends AppCompatActivity {
 
         thumbnail = findViewById(R.id.thumbnail);
         imageCaptureStatus = findViewById(R.id.imageCaptureStatus);
+
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -745,6 +754,7 @@ public class NewIssue extends AppCompatActivity {
                         View bottomSheetView = LayoutInflater.from(this).inflate(layout, null);
                         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
 
+
                         /*
                         try{
                             BottomSheetBehavior bottomSheetBehavior = BottomSheetBehavior.from((View) bottomSheetView.getParent());
@@ -765,6 +775,9 @@ public class NewIssue extends AppCompatActivity {
                         EditText passpin = bottomSheetDialog.findViewById(R.id.pin_input);
                         LinearProgressIndicator linearProgressIndicator = bottomSheetDialog.findViewById(R.id.verify_progress);
                         bslinearProgressIndicator = linearProgressIndicator;
+                        bottomSheetAnimation = bottomSheetDialog.findViewById(R.id.nfcanimation);
+                        bottomSheetAnimation.setAnimation(R.raw.nfc);
+                        bottomSheetAnimation.playAnimation();
 
                         //nfcAdapter.enableForegroundDispatch(this, pendingIntent, null, null);
                         //triggered native android nfc
@@ -866,7 +879,6 @@ public class NewIssue extends AppCompatActivity {
         DBHandler dbHandler = new DBHandler(getApplicationContext());
         SQLiteDatabase db = dbHandler.getReadableDatabase();
         searchString.setInputType(InputType.TYPE_CLASS_TEXT);
-
 
         GetStockTable getStockTable = new GetStockTable(new GetStockTableListener() {
             @Override
@@ -1733,6 +1745,7 @@ public class NewIssue extends AppCompatActivity {
             Bitmap bitmap;
             String pathname = getFilesDir()+"/image.jpg";
             base64Image = "";
+
             isImageCaptured = false;
             try {
                 bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), Uri.fromFile(new File(pathname)));
@@ -1746,6 +1759,7 @@ public class NewIssue extends AppCompatActivity {
             byte[] byteArray = byteArrayOutputStream.toByteArray();
             //Log.d("Image  Byte Array", Arrays.toString(byteArray));
             File jpgImage = new File(getFilesDir(),"image.jpg");
+            imageFile = jpgImage;
             FileOutputStream fileOutputStream = null;
             try {
                 fileOutputStream = new FileOutputStream(jpgImage.getPath());
@@ -1761,82 +1775,78 @@ public class NewIssue extends AppCompatActivity {
 
             base64Image = Base64.getEncoder().encodeToString(byteArray);
             File file = new File(pathname);
-            boolean deleteFile = file.delete();
-            if(deleteFile){
-                Toast.makeText(this, "Image Captured Successfully", Toast.LENGTH_SHORT).show();
-                isImageCaptured = true;
-                imageCaptureStatus.setText("Image Captured");
-                imageCaptureStatus.setTextColor(Color.parseColor("#1cd41c"));
-                //remove attribute : app:layout_constraintEnd_toEndOf="parent"
-                ConstraintSet constraintSet = new ConstraintSet();
-                ConstraintLayout constraintLayout = findViewById(R.id.imageLayout);
-                constraintSet.clone(constraintLayout);
-                //constraintSet.connect(R.id.imageCaptureStatus,ConstraintSet.END,R.id.image_capture_button,ConstraintSet.START,0);
-                constraintSet.clear(R.id.imageCaptureStatus,ConstraintSet.END);
-                constraintSet.applyTo(constraintLayout);
+            //boolean deleteFile = file.delete();
+
+            Toast.makeText(this, "Image Captured Successfully", Toast.LENGTH_SHORT).show();
+            isImageCaptured = true;
+            imageCaptureStatus.setText("Image Captured");
+            imageCaptureStatus.setTextColor(Color.parseColor("#1cd41c"));
+            //remove attribute : app:layout_constraintEnd_toEndOf="parent"
+            ConstraintSet constraintSet = new ConstraintSet();
+            ConstraintLayout constraintLayout = findViewById(R.id.imageLayout);
+            constraintSet.clone(constraintLayout);
+            //constraintSet.connect(R.id.imageCaptureStatus,ConstraintSet.END,R.id.image_capture_button,ConstraintSet.START,0);
+            constraintSet.clear(R.id.imageCaptureStatus,ConstraintSet.END);
+            constraintSet.applyTo(constraintLayout);
 
 
-                ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) imageCaptureStatus.getLayoutParams();
-                params.setMargins(25,0,0,0);
-                imageCaptureStatus.setLayoutParams(params);
+            ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) imageCaptureStatus.getLayoutParams();
+            params.setMargins(25,0,0,0);
+            imageCaptureStatus.setLayoutParams(params);
 
-                MaterialButton removeImage = findViewById(R.id.removeImage);
-                MaterialButton previewImage = findViewById(R.id.previewImage);
-                previewImage.setVisibility(View.VISIBLE);
-                removeImage.setVisibility(View.VISIBLE);
-                removeImage.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        imageCaptureStatus.setText("No Image Captured");
-                        imageCaptureStatus.setTextColor(Color.parseColor("#ff0000"));
-                        ConstraintSet constraintSet = new ConstraintSet();
-                        ConstraintLayout constraintLayout = findViewById(R.id.imageLayout);
-                        constraintSet.clone(constraintLayout);
-                        constraintSet.connect(R.id.imageCaptureStatus,ConstraintSet.END,R.id.imageLayout,ConstraintSet.END,0);
-                        constraintSet.applyTo(constraintLayout);
+            MaterialButton removeImage = findViewById(R.id.removeImage);
+            MaterialButton previewImage = findViewById(R.id.previewImage);
+            previewImage.setVisibility(View.VISIBLE);
+            removeImage.setVisibility(View.VISIBLE);
+            removeImage.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    imageCaptureStatus.setText("No Image Captured");
+                    imageCaptureStatus.setTextColor(Color.parseColor("#ff0000"));
+                    ConstraintSet constraintSet = new ConstraintSet();
+                    ConstraintLayout constraintLayout = findViewById(R.id.imageLayout);
+                    constraintSet.clone(constraintLayout);
+                    constraintSet.connect(R.id.imageCaptureStatus,ConstraintSet.END,R.id.imageLayout,ConstraintSet.END,0);
+                    constraintSet.applyTo(constraintLayout);
 
-                        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) imageCaptureStatus.getLayoutParams();
-                        params.setMargins(15,0,15,0);
-                        imageCaptureStatus.setLayoutParams(params);
+                    ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) imageCaptureStatus.getLayoutParams();
+                    params.setMargins(15,0,15,0);
+                    imageCaptureStatus.setLayoutParams(params);
 
-                        MaterialButton removeImage = findViewById(R.id.removeImage);
-                        removeImage.setVisibility(View.GONE);
-                        previewImage.setVisibility(View.GONE);
-                        base64Image = "";
-                        isImageCaptured = false;
-                        thumbnail.setImageBitmap(null);
-                        //android:src="@color/gray"
-                        //thumbnail.setBackgroundColor(Color.parseColor("#FFBDBEC2"));
-                        thumbnail.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
+                    MaterialButton removeImage = findViewById(R.id.removeImage);
+                    removeImage.setVisibility(View.GONE);
+                    previewImage.setVisibility(View.GONE);
+                    base64Image = "";
+                    imageFile.delete();
+                    isImageCaptured = false;
+                    thumbnail.setImageBitmap(null);
+                    //android:src="@color/gray"
+                    //thumbnail.setBackgroundColor(Color.parseColor("#FFBDBEC2"));
+                    thumbnail.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
 
-                            }
-                        });
-                    }
-                });
-
-
-                thumbnail.setImageBitmap(bitmap);
-                //thumbnail.setBackgroundColor(Color.parseColor("#FFBDBEC2"));
-
-                thumbnail.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        displayThumbnail(bitmap);
-                    }
-                });
-                previewImage.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        displayThumbnail(bitmap);
-                    }
-                });
-            }
-            //Toast.makeText(this, String.valueOf(base64Image), Toast.LENGTH_SHORT).show();
-            //Log.d("Image",base64Image);
+                        }
+                    });
+                }
+            });
 
 
+            thumbnail.setImageBitmap(bitmap);
+            //thumbnail.setBackgroundColor(Color.parseColor("#FFBDBEC2"));
+
+            thumbnail.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    displayThumbnail(bitmap);
+                }
+            });
+            previewImage.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    displayThumbnail(bitmap);
+                }
+            });
 
         }
     }
@@ -2111,139 +2121,108 @@ public class NewIssue extends AppCompatActivity {
             DBHandler dbHandler = new DBHandler(getApplicationContext());
             String status = "";
             Integer latestID = null;
+            String server_message = "";
+            JSONObject jsonObject = null;
             try{
 
-                JSONObject jsonObject = new JSONObject(jsonResponse);
+                jsonObject = new JSONObject(jsonResponse);
+                //System.out.println(jsonObject.toString());
                 status = jsonObject.getString("status");
-                latestID = jsonObject.getInt("lastID");
+                server_message = jsonObject.getString("message");
 
 
             } catch (Exception e){
                 e.printStackTrace();
             }
 
-            if (status.equals("verified") && latestID != null){
-
+            if (status.equals("verified")){
+                try {
+                    latestID = jsonObject.getInt("lastID");
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
                 latestIssueID = latestID;
 
                 //get latest transaction ID, put to ongoingIssueMetaTransactionID, sync other data to ongoingIssueMetaTable
                 new_id = latestIssueID+1;
                 String issuer_name = dbHandler.getFirstName()+" "+dbHandler.getLastName();
 
-                String new_date;
-                String new_time;
-
-                ExecutorService executorService = Executors.newSingleThreadExecutor();
-                Future<String> futureResult = executorService.submit(() -> {
-
-                    try{
-                        Request request = new Request.Builder()
-                                .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/tst/getDateTime")
-                                .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
-                                //.post(requestBody)
-                                .build();
-                        Response response = okHttpClient.newCall(request).execute();
-                        String resString = response.body().string();
-                        Log.i("Response",resString);
-                        JSONObject jsonObject1 = new JSONObject(resString);
-
-                        String status1 = jsonObject1.optString("status");
-                        resString = jsonObject1.optString("data");
-
-                        TokenChecker tokenChecker = new TokenChecker();
-                        tokenChecker.checkToken(status1, getApplicationContext(), NewIssue.this);
-
-                        response.close();
-                        return resString;
-                    } catch (Exception e){
-                        e.printStackTrace();
-
-                    }
-                    return null;
-                });
-
                 try {
-                    String result = futureResult.get();
-                    JSONObject jsonObject = new JSONObject(result);
-                    new_date = jsonObject.optString("date");
-                    new_time = jsonObject.optString("time");
-
-
                     TextInputEditText bk = findViewById(R.id.book_number);
                     String bookNumber = bk.getText().toString();
                     String jobNumber = jobNumberEditText.getText().toString();
                     Log.e("RECEIVER DEPARTMENT",": "+receiver_dept);
 
-
-                    dbHandler.addOngoingIssueMeta(new_id, dbHandler.getIssuerID(),issuer_name,staffID,receiver_full_name,receiver_dept,new_date,new_time);
-                    dbHandler.updateOngoingIssueTable(new_id, dbHandler.getIssuerID(),issuer_name,staffID,receiver_full_name,receiver_dept,new_date,new_time,bookNumber, jobNumber);
+                    dbHandler.addOngoingIssueMeta(new_id, dbHandler.getIssuerID(),issuer_name,staffID,receiver_full_name,receiver_dept,null, null);
+                    dbHandler.updateOngoingIssueTable(new_id, dbHandler.getIssuerID(),issuer_name,staffID,receiver_full_name,receiver_dept,null,null,bookNumber, jobNumber);
 
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
 
-                SyncQuantityTask syncQuantityTask = new SyncQuantityTask(new SyncQuantityTaskListener() {
+                SubmitIssue submitIssue = new SubmitIssue(new SubmitIssueListener() {
                     @Override
-                    public void onTaskComplete(String response) {
+                    public void onTaskComplete(SimpleResponseMessage response) {
 
+                            if(response.getStatus().equals("success")){
+                                bottomSheetAnimation.setAnimation(R.raw.success);
+                                bottomSheetAnimation.playAnimation();
+                                bottomSheetAnimation.setRepeatCount(0);
 
-
-                        if (!blocktransaction){
-                            if(response.equals("success")){
-                                bslinearProgressIndicator.setVisibility(View.GONE);
-                                Intent intent = new Intent(NewIssue.this, ReceiptPage.class);
-                                bsbottomSheetDialog.dismiss();
-                                startActivity(intent);
-                                mIsCardReaderOpen = false;
-                                finish();
-
+                                new Handler().postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        bslinearProgressIndicator.setVisibility(View.GONE);
+                                        Intent intent = new Intent(NewIssue.this, ReceiptPage.class);
+                                        bsbottomSheetDialog.dismiss();
+                                        startActivity(intent);
+                                        mIsCardReaderOpen = false;
+                                        finish();
+                                    }
+                                }, 3000);
 
                             } else {
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
                                         bsbottomSheetDialog.dismiss();
-                                        Toast.makeText(NewIssue.this, "An error occurred while updating database.", Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(NewIssue.this, "An error occurred while updating database. "+response.getMessage(), Toast.LENGTH_SHORT).show();
                                         mIsCardReaderOpen = false;
                                     }
                                 });
                             }
 
-                        } else {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    bsbottomSheetDialog.dismiss();
-                                    Toast.makeText(NewIssue.this, "No data was synced", Toast.LENGTH_SHORT).show();
-                                    mIsCardReaderOpen = false;
-                                }
-                            });
-                        }
-
                     }
                 });
-                syncQuantityTask.execute();
+                submitIssue.execute();
                 //linearProgressIndicator.setVisibility(View.GONE);
-
-
-
 
             } else {
                 String message = null;
 
                 if(status.equals("failed")){
-                    message = "Wrong Access Card";
+                    message = server_message;
                     //nfcAdapter.enableForegroundDispatch(NewIssue.this, pendingIntent, null, null);
-                    bsbottomSheetDialog.dismiss();
+                    bottomSheetAnimation.setAnimation(R.raw.warning);
+                    bottomSheetAnimation.playAnimation();
+                    bottomSheetAnimation.setRepeatCount(0);
                     mIsCardReaderOpen = false;
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            bsbottomSheetDialog.dismiss();
+                        }
+                    }, 5000);
+
+
                 } else {
                     message = "Could not authenticate";
                     //nfcAdapter.enableForegroundDispatch(NewIssue.this, pendingIntent, null, null);
                     bsbottomSheetDialog.dismiss();
                     mIsCardReaderOpen = false;
                 }
-                Toast.makeText(NewIssue.this, message, Toast.LENGTH_SHORT).show();
+                Toast.makeText(NewIssue.this, message, Toast.LENGTH_LONG).show();
                 bslinearProgressIndicator.setVisibility(View.GONE);
 
             }
@@ -2254,346 +2233,112 @@ public class NewIssue extends AppCompatActivity {
     }
 
 
-    public interface SyncQuantityTaskListener {
-        void onTaskComplete(String response);
+    public interface SubmitIssueListener {
+        void onTaskComplete(SimpleResponseMessage response);
     }
 
     @SuppressLint("StaticFieldLeak")
-    public class SyncQuantityTask extends AsyncTask<Void, Void, String> {
-        private SyncQuantityTaskListener listener;
+    public class SubmitIssue extends AsyncTask<Void, Void, SimpleResponseMessage> {
+        private SubmitIssueListener listener;
 
-        public SyncQuantityTask(SyncQuantityTaskListener listener) {
+        public SubmitIssue(SubmitIssueListener listener) {
             this.listener = listener;
         }
 
         @Override
-        protected String doInBackground(Void... voids) {
+        protected SimpleResponseMessage doInBackground(Void... voids) {
             DBHandler dbHandler = new DBHandler(getApplicationContext());
             SQLiteDatabase db = dbHandler.openDatabase(getApplicationContext());
             Cursor cursor = db.rawQuery("SELECT * FROM ongoingIssueTable",null);
-            JSONObject jsonObjectProductQuantity;
-            String message = null;
-            String finalresponse = null;
-            List<IssueHistoryData> issueHistoryDataList = new ArrayList<>();
+            List<IssueData> issueDataList = new ArrayList<>();
             Gson gson = new Gson();
+            SimpleResponseMessage simpleResponseMessage = new SimpleResponseMessage();
 
-            while (cursor.moveToNext()){
-
-                String itemCode = cursor.getString(cursor.getColumnIndexOrThrow("id")); //represents itemCode
-                localquantity = cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity"));
-                localname = cursor.getString(cursor.getColumnIndexOrThrow("ProductName"));
-
-                String sql1 = "{\"type\":\"sync_issue\",\"condition\":\"compare_quantity\",\"id\":\""+itemCode+"\"}";
-
-                Log.d("Quantity Test", String.valueOf(sql1));
-
-                try{
-
-                    RequestBody requestBody =  RequestBody.create(sql1, okhttp3.MediaType.parse("application/json; charset=utf-8"));
-                    Request request = new Request.Builder()
-                            .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
-                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
-                            .post(requestBody)
-                            .build();
-                    Response response = okHttpClient.newCall(request).execute();
-                    String resString = response.body().string();
-                    JSONObject jsonObject1 = new JSONObject(resString);
-
-                    String status1 = jsonObject1.optString("status");
-                    resString = jsonObject1.optString("data");
-
-                    TokenChecker tokenChecker = new TokenChecker();
-                    tokenChecker.checkToken(status1, getApplicationContext(), NewIssue.this);
-
-                    Log.d("Quantity Test", String.valueOf(resString));
-
-                    jsonObjectProductQuantity = new JSONObject(resString);
-
-                    dbquantity = Float.valueOf(jsonObjectProductQuantity.getString("productQuantity"));
-                    Log.i("QTY", String.valueOf(dbquantity));
-
-                    if(dbquantity>=localquantity){
-                        blocktransaction = false;
-
-                    } else if (localquantity>dbquantity) {
-                        blocktransaction = true;
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(NewIssue.this, "Quantity of "+localname+" exceeds quantity in database.", Toast.LENGTH_LONG).show();
-                                Toast.makeText(NewIssue.this, "Please update with new quantity of "+localname, Toast.LENGTH_LONG).show();
-                            }
-                        });
-                        break;
-                    } else{
-                        blocktransaction = true;
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(NewIssue.this, "Quantity of "+localname+" has changed in database.", Toast.LENGTH_LONG).show();
-                                Toast.makeText(NewIssue.this, "Please  update with new quantity of "+localname, Toast.LENGTH_LONG).show();
-                            }
-                        });
-                        break;
-                    }
-
-                    if(blocktransaction){
-                        break;
-                    }
-
-
-                    response.close();
-
-                } catch (Exception e){
-                    e.printStackTrace();
-
-                }
-
+            if(cursor.getCount() == 0){
+                simpleResponseMessage.setMessage("No data to sync");
+                simpleResponseMessage.setStatus("failed");
+                return simpleResponseMessage;
             }
 
-            if (!blocktransaction){
-
-                Cursor cursorx = db.rawQuery("SELECT * FROM ongoingIssueTable",null);
-
-                while (cursorx.moveToNext()) {
-
-                    Boolean isFirst = false;
-                    Boolean isLast = false;
-
-                    if(cursorx.isFirst()){
-                        isFirst = true;
-                    } else {
-                        isFirst = false;
-                    }
-
-                    if(cursorx.isLast()){
-                        isLast = true;
-                    } else{
-                        isLast = false;
-                    }
+            String jobNumber = "";
+            String bookNumber = "";
 
 
-                    String idx = cursorx.getString(cursorx.getColumnIndexOrThrow("id")); //represents itemCode
-                    localquantity = cursorx.getFloat(cursorx.getColumnIndexOrThrow("ProductQuantity"));
-                    localname = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductName"));
-
-                    //for issue history
-                    Integer TransactionID = cursorx.getInt(cursorx.getColumnIndexOrThrow("TransactionID"));
-
-                    String ProductName = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductName"));
-                    String ProductDesc = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductDesc"));
-                    Float ProductQuantity = cursorx.getFloat(cursorx.getColumnIndexOrThrow("ProductQuantity"));
-                    String ProductStore = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductStore"));
-                    String ProductLocation = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductLocation"));
-
-                    Integer IssuerID = cursorx.getInt(cursorx.getColumnIndexOrThrow("IssuerID"));
-                    String IssuerName = cursorx.getString(cursorx.getColumnIndexOrThrow("IssuerName"));
-                    Integer ReceiverID = cursorx.getInt(cursorx.getColumnIndexOrThrow("ReceiverID"));
-                    String ReceiverName = cursorx.getString(cursorx.getColumnIndexOrThrow("ReceiverName"));
-                    String ReceiverDept = cursorx.getString(cursorx.getColumnIndexOrThrow("ReceiverDepartment"));
-                    String TransactionDate = cursorx.getString(cursorx.getColumnIndexOrThrow("TransactionDate"));
-                    String TransactionTime = cursorx.getString(cursorx.getColumnIndexOrThrow("TransactionTime"));
-                    String BookNumber = cursorx.getString(cursorx.getColumnIndexOrThrow("BookNumber"));
-                    String unit = cursorx.getString(cursorx.getColumnIndexOrThrow("ProductUnit"));
-                    String jobnumber = cursorx.getString(cursorx.getColumnIndexOrThrow("JobNumber"));
-
-
-
-
-                    String sql2 = "{\"type\":\"sync_issue\",\"condition\":\"compare_quantity\",\"id\":\""+idx+"\"}";
-
-                    try{
-
-                        RequestBody requestBody =  RequestBody.create(sql2, okhttp3.MediaType.parse("application/json; charset=utf-8"));
-                        Request request = new Request.Builder()
-                                .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
-                                .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
-                                .post(requestBody)
-                                .build();
-                        Response response = okHttpClient.newCall(request).execute();
-                        String resString = response.body().string();
-                        JSONObject jsonObject1 = new JSONObject(resString);
-                        Log.d("Retrieval Test", String.valueOf(resString));
-
-                        String status1 = jsonObject1.optString("status");
-                        resString = jsonObject1.optString("data");
-
-                        TokenChecker tokenChecker = new TokenChecker();
-                        tokenChecker.checkToken(status1, getApplicationContext(), NewIssue.this);
-                        Log.d("Quantity Test", String.valueOf(resString));
-
-                        jsonObjectProductQuantity = new JSONObject(resString);
-                        dbquantity = (float) jsonObjectProductQuantity.getDouble("productQuantity");
-                        Log.i("QTY", String.valueOf(dbquantity));
-
-                        if(dbquantity>=localquantity){
-                            blocktransaction = false;
-
-
-                        } else if (localquantity>dbquantity) {
-                            blocktransaction = true;
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(NewIssue.this, "Quantity of "+localname+" exceeds quantity in database.", Toast.LENGTH_LONG).show();
-                                    Toast.makeText(NewIssue.this, "Please update with new quantity of "+localname, Toast.LENGTH_LONG).show();
-                                }
-                            });
-                            break;
-                        } else{
-                            blocktransaction = true;
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(NewIssue.this, "Quantity of "+localname+" has changed in database.", Toast.LENGTH_LONG).show();
-                                    Toast.makeText(NewIssue.this, "Please  update with new quantity of "+localname, Toast.LENGTH_LONG).show();
-                                }
-                            });
-                            break;
-                        }
-
-                        if(blocktransaction){
-                            break;
-                        }
-
-
-                        response.close();
-
-                    } catch (Exception e){
-                        e.printStackTrace();
-
-                    }
-
-
-
-                    if(!blocktransaction){
-                        //update quantity and set lastID for stock issue
-                        new_quantity = dbquantity-localquantity;
-                        Integer updatedID = new_id;
-                        //String sql3 = "{\"type\":\"sync_issue\",\"condition\":\"update_quantity\",\"id\":\""+idx+"\",\"new_quantity\":\""+new_quantity+"\",\"new_lastID\":\""+updatedID+"\",\"old_quantity\":\""+localquantity+"\"}";
-
-                        try {
-
-                            /*
-
-                            RequestBody requestBody =  RequestBody.create(sql3, okhttp3.MediaType.parse("application/json; charset=utf-8"));
-                            Request request = new Request.Builder()
-                                    .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
-                                    .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
-                                    .post(requestBody)
-                                    .build();
-                            Response response = okHttpClient.newCall(request).execute();
-                            String resString = response.body().string();
-                            jsonObjectProductQuantity = new JSONObject(resString);
-                            Log.i("Message", "RECEIVED JSON: "+jsonObjectProductQuantity);
-
-                            message = jsonObjectProductQuantity.optString("status");
-                            IssueRate = jsonObjectProductQuantity.optString("rate");
-                            IssueValue = jsonObjectProductQuantity.optString("totalIssueValue");
-                            FifoStatus = jsonObjectProductQuantity.optString("fifo");
-                            Log.i("Message", "Issue Quantity Sync Status: "+message);
-
-                            */
-                            //String historysql = "{\"rate\":\""+IssueRate+"\",\"value\":\""+IssueValue+"\",\"fifo\":\""+FifoStatus+"\",\"new_quantity\":\""+new_quantity+"\",\"new_lastID\":\""+updatedID+"\",\"old_quantity\":\""+localquantity+"\",\"type\":\"sync_issue\",\"condition\":\"sync_history\",\"TransactionID\":\""+TransactionID+"\",\"id\":\""+idx+"\",\"ProductName\":\""+ProductName+"\",\"ProductDesc\":\""+ProductDesc+"\",\"ProductQuantity\":\""+ProductQuantity+"\",\"ProductStore\":\""+ProductStore+"\",\"ProductLocation\":\""+ProductLocation+"\",\"IssuerID\":\""+IssuerID+"\",\"IssuerName\":\""+IssuerName+"\",\"ReceiverID\":\""+ReceiverID+"\",\"ReceiverName\":\""+ReceiverName+"\",\"ReceiverDepartment\":\""+ReceiverDept+"\",\"TransactionDate\":\""+TransactionDate+"\",\"TransactionTime\":\""+TransactionTime+"\",\"BookNumber\":\""+BookNumber+"\",\"TransactionType\":\"Stock Issue\",\"Balance\":\""+balance+"\",\"ProductUnit\":\""+unit+"\",\"JobNumber\":\""+jobnumber+"\"}";
-                            //String historysql = "{\"isFirst\":\""+isFirst+"\",\"isLast\":\""+isLast+"\",\"new_quantity\":\""+new_quantity+"\",\"new_lastID\":\""+updatedID+"\",\"old_quantity\":\""+localquantity+"\",\"type\":\"sync_issue\",\"condition\":\"sync_history\",\"TransactionID\":\""+TransactionID+"\",\"id\":\""+idx+"\",\"ProductName\":\""+ProductName+"\",\"ProductDesc\":\""+ProductDesc+"\",\"ProductQuantity\":\""+ProductQuantity+"\",\"ProductStore\":\""+ProductStore+"\",\"ProductLocation\":\""+ProductLocation+"\",\"IssuerID\":\""+IssuerID+"\",\"IssuerName\":\""+IssuerName+"\",\"ReceiverID\":\""+ReceiverID+"\",\"ReceiverName\":\""+ReceiverName+"\",\"ReceiverDepartment\":\""+ReceiverDept+"\",\"TransactionDate\":\""+TransactionDate+"\",\"TransactionTime\":\""+TransactionTime+"\",\"BookNumber\":\""+BookNumber+"\",\"TransactionType\":\"Stock Issue\",\"Balance\":\""+balance+"\",\"ProductUnit\":\""+unit+"\",\"JobNumber\":\""+jobnumber+"\"}";
-                            //rowData.put(new JSONObject(historysql));
-
-                            IssueHistoryData issueHistoryData = new IssueHistoryData();
-
-                            issueHistoryData.setFirst(isFirst);
-                            issueHistoryData.setLast(isLast);
-                            issueHistoryData.setNewQuantity(new_quantity);
-                            issueHistoryData.setNewLastID(Long.valueOf(updatedID));
-                            issueHistoryData.setOldQuantity(localquantity);
-                            issueHistoryData.setTransactionID(Long.valueOf(TransactionID));
-                            issueHistoryData.setProductName(ProductName);
-                            issueHistoryData.setProductDesc(ProductDesc);
-                            issueHistoryData.setProductQuantity(ProductQuantity);
-                            issueHistoryData.setProductStore(ProductStore);
-                            issueHistoryData.setProductLocation(ProductLocation);
-                            issueHistoryData.setIssuerID(Long.valueOf(IssuerID));
-                            issueHistoryData.setIssuerName(IssuerName);
-                            issueHistoryData.setReceiverID(Long.valueOf(ReceiverID));
-                            issueHistoryData.setReceiverName(ReceiverName);
-                            issueHistoryData.setReceiverDepartment(ReceiverDept);
-                            issueHistoryData.setTransactionDate(TransactionDate);
-                            issueHistoryData.setTransactionTime(TransactionTime);
-                            issueHistoryData.setBookNumber(BookNumber);
-                            issueHistoryData.setTransactionType("Stock Issue");
-                            issueHistoryData.setBalance(balance);
-                            issueHistoryData.setProductUnit(unit);
-                            issueHistoryData.setJobNumber(jobnumber);
-                            issueHistoryData.setId(idx);
-                            issueHistoryData.setType("sync_issue");
-                            issueHistoryData.setCondition("sync_history");
-
-                            issueHistoryDataList.add(issueHistoryData);
-
-                        } catch (Exception e){
-                            e.printStackTrace();
-                        }
-                    }
-                    dbHandler.close();
-
+            while (cursor.moveToNext()){
+                if(cursor.isFirst()){
+                    jobNumber = cursor.getString(cursor.getColumnIndexOrThrow("JobNumber"));
+                    bookNumber = cursor.getString(cursor.getColumnIndexOrThrow("BookNumber"));
                 }
 
-                cursorx.close();
+                IssueData issueData = new IssueData();
+                issueData.setProductName(cursor.getString(cursor.getColumnIndexOrThrow("ProductName")));
+                issueData.setProductDesc(cursor.getString(cursor.getColumnIndexOrThrow("ProductDesc")));
+                issueData.setProductQuantity(cursor.getFloat(cursor.getColumnIndexOrThrow("ProductQuantity")));
+                issueData.setProductStore(cursor.getString(cursor.getColumnIndexOrThrow("ProductStore")));
+                issueData.setProductLocation(cursor.getString(cursor.getColumnIndexOrThrow("ProductLocation")));
+                issueData.setIssuerID((long) cursor.getInt(cursor.getColumnIndexOrThrow("IssuerID")));
+                issueData.setIssuerName(cursor.getString(cursor.getColumnIndexOrThrow("IssuerName")));
+                issueData.setReceiverID((long) cursor.getInt(cursor.getColumnIndexOrThrow("ReceiverID")));
+                issueData.setReceiverName(cursor.getString(cursor.getColumnIndexOrThrow("ReceiverName")));
+                issueData.setReceiverDepartment(cursor.getString(cursor.getColumnIndexOrThrow("ReceiverDepartment")));
+                issueData.setBookNumber(cursor.getString(cursor.getColumnIndexOrThrow("BookNumber")));
+                issueData.setProductUnit(cursor.getString(cursor.getColumnIndexOrThrow("ProductUnit")));
+                issueData.setJobNumber(cursor.getString(cursor.getColumnIndexOrThrow("JobNumber")));
+                issueData.setId(cursor.getString(cursor.getColumnIndexOrThrow("id")));
+                issueDataList.add(issueData);
+            }
 
+            String data = gson.toJson(issueDataList);
+            try{
 
-                String rowData = gson.toJson(issueHistoryDataList);
-                String data = "{\"data\":"+rowData+",\"type\":\"sync_issue\",\"condition\":\"sync_history\",\"image\":\""+base64Image+"\"}";
+                //RequestBody requestBody =  RequestBody.create(data, okhttp3.MediaType.parse("application/json; charset=utf-8"));
+                RequestBody fileBody = RequestBody.create(imageFile, MediaType.parse("image/*"));
 
-                //Log.d("Data",data);
+                RequestBody jsonBody = RequestBody.create(data, MediaType.parse("application/json; charset=utf-8"));
 
-                try{
+                MultipartBody requestBody = new MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("image", imageFile.getName(), fileBody)
+                        .addFormDataPart("issueData", null, jsonBody)
+                        .build();
+                Request request = new Request.Builder()
+                        .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/stock/issues?jobNumber="+jobNumber+"&bookNumber="+bookNumber)
+                        .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
+                        .post(requestBody)
+                        .build();
 
-                    RequestBody requestBody3 =  RequestBody.create(data, okhttp3.MediaType.parse("application/json; charset=utf-8"));
-                    Request request3 = new Request.Builder()
-                            .url("https://"+ dbHandler.getApiHost()+":"+dbHandler.getApiPort()+"/api/v1/fetch")
-                            .addHeader("Authorization",myPrefs.getToken(getApplicationContext()))
-                            .post(requestBody3)
-                            .build();
-                    Response responsex = okHttpClient.newCall(request3).execute();
-                    String resString3 = responsex.body().string();
-                    try{
-                        JSONObject jsonObject = new JSONObject(resString3);
-                        finalresponse = jsonObject.optString("status");
-
-
-
-                        TokenChecker tokenChecker = new TokenChecker();
-                        tokenChecker.checkToken(finalresponse, getApplicationContext(), NewIssue.this);
-
-                    } catch (Exception e){
-                        e.printStackTrace();
-                        finalresponse = "failed";
-                        blocktransaction = true;
-                        cursorx.close();
-                    }
-
-                    responsex.close();
-
-                } catch (Exception e){
-                    e.printStackTrace();
-
+                Response response = okHttpClient.newCall(request).execute();
+                String resString3 = response.body().string();
+                if(response.code() == 200){
+                    simpleResponseMessage.setMessage("success");
+                    simpleResponseMessage.setStatus("success");
+                    imageFile.delete();
+                } else {
+                    JSONObject jsonObject = new JSONObject(resString3);
+                    simpleResponseMessage.setMessage(jsonObject.optString("message"));
+                    simpleResponseMessage.setStatus("failed");
                 }
-
-
+                response.close();
+            } catch (Exception e){
+                e.printStackTrace();
+                simpleResponseMessage.setMessage("An error occurred while syncing data");
+                simpleResponseMessage.setStatus("failed");
             }
 
             dbHandler.close();
             db.close();
-            return finalresponse;
+            return simpleResponseMessage;
         }
 
         @Override
-        protected void onPostExecute(String response) {
+        protected void onPostExecute(SimpleResponseMessage response) {
             if (listener != null) {
                 listener.onTaskComplete(response);
             }
 
         }
     }
+
 /*
     @Override
     protected void onNewIntent(Intent intent) {
@@ -2773,6 +2518,9 @@ public class NewIssue extends AppCompatActivity {
                 BigInteger uidInt = new BigInteger(bytesToHexString(data), 16);
                 //Toast.makeText(this, "Integer Value: "+String.valueOf(uidInt), Toast.LENGTH_LONG).show();
                 if(mIsCardReaderOpen){
+                    bottomSheetAnimation.setAnimation(R.raw.verifying);
+                    bottomSheetAnimation.playAnimation();
+                    bottomSheetAnimation.setRepeatCount(0);
                     new VerifyStaffTask(new VerifyStaffTaskListener() {
                         @Override
                         public void onTaskComplete(String response) {
