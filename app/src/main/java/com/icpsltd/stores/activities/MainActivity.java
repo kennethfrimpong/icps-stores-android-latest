@@ -59,6 +59,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.logging.Logger;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -297,12 +298,9 @@ public class MainActivity extends AppCompatActivity {
     private void readCardAsync (String APDUcommand){
         App.BioManager.cardCommand(new ApduCommand(APDUcommand), false, (Biometrics.ResultCode resultcode, byte sw1, byte sw2, byte[] data) ->{
             if(OK == resultcode){
-                //Toast.makeText(this, "sw1="+sw1, Toast.LENGTH_SHORT).show();
-                //Toast.makeText(this, "sw1="+sw2, Toast.LENGTH_SHORT).show();
-                //Toast.makeText(this, "data="+ Arrays.toString(data), Toast.LENGTH_SHORT).show();
-                //Toast.makeText(this, "HexString="+bytesToHexString(data), Toast.LENGTH_SHORT).show();
+//                Logger.getLogger("CardReader").info("Data: "+ Arrays.toString(data));
+//                Logger.getLogger("CardReader").info("Data: "+bytesToHexString(data));
                 BigInteger uidInt = new BigInteger(bytesToHexString(data), 16);
-                //Toast.makeText(this, "Integer Value: "+String.valueOf(uidInt), Toast.LENGTH_LONG).show();
                 verifyAccessCard(uidInt);
             } else if (INTERMEDIATE == resultcode) {
                 Toast.makeText(this, "INTERMEDIATE", Toast.LENGTH_SHORT).show();

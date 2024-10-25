@@ -22,7 +22,6 @@ import com.credenceid.biometrics.Biometrics;
 import com.credenceid.icao.GIdData;
 import com.credenceid.icao.GhanaIdCardFpTemplateInfo;
 import com.credenceid.icao.ICAOReadIntermediateCode;
-import com.gmail.samehadar.iosdialog.CamomileSpinner;
 import com.icpsltd.stores.R;
 import com.icpsltd.stores.model.CardDetails;
 import com.icpsltd.stores.setting.DialogResult;
@@ -205,12 +204,12 @@ public class Functions {
     public static void Show_loader(Context context, boolean outside_touch, boolean cancleable) {
         dialog = new Dialog(context);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.item_dialog_loading_view);
+       // dialog.setContentView(R.layout.item_dialog_loading_view);
         dialog.getWindow().setBackgroundDrawable(context.getResources().getDrawable(R.drawable.d_round_white_background));
 
 
-        CamomileSpinner loader = dialog.findViewById(R.id.loader);
-        loader.start();
+//        CamomileSpinner loader = dialog.findViewById(R.id.loader);
+//        loader.start();
 
 
         if (!outside_touch)

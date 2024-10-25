@@ -33,7 +33,7 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar','*.aar'])
     implementation files('libs/CredenceIDDeviceSDK.jar')
     implementation 'com.karumi:dexter:6.2.2'
-    implementation 'com.gmail.samehadar:iosdialog:1.0'
+//    implementation 'com.gmail.samehadar:iosdialog:1.0'
     implementation 'com.github.michael-rapp:android-material-dialog:5.2.3'
     //
 
